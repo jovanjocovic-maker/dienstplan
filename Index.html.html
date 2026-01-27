@@ -1,0 +1,1926 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dienstplan Manager - Vollversion Plus</title>
+<style>
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: #f5f7fa;
+  padding: 15px;
+}
+
+.container {
+  max-width: 1600px;
+  margin: 0 auto;
+}
+
+.header {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 25px;
+  border-radius: 15px;
+  margin-bottom: 20px;
+  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+}
+
+.header h1 {
+  font-size: 28px;
+  margin-bottom: 15px;
+}
+
+.header-controls {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.btn {
+  padding: 12px 20px;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.btn:active {
+  transform: translateY(0);
+}
+
+.btn-primary {
+  background: #10b981;
+  color: white;
+}
+
+.btn-secondary {
+  background: white;
+  color: #667eea;
+}
+
+.btn-danger {
+  background: #ef4444;
+  color: white;
+}
+
+.btn-small {
+  padding: 6px 12px;
+  font-size: 12px;
+}
+
+.tabs {
+  display: flex;
+  gap: 8px;
+  background: white;
+  padding: 8px;
+  border-radius: 12px;
+  margin-bottom: 20px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  overflow-x: auto;
+}
+
+.tab {
+  flex: 1;
+  min-width: 120px;
+  padding: 12px 16px;
+  border: none;
+  background: transparent;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 13px;
+  color: #64748b;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.tab.active {
+  background: #667eea;
+  color: white;
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+}
+
+.content {
+  display: none;
+}
+
+.content.active {
+  display: block;
+}
+
+.card {
+  background: white;
+  padding: 25px;
+  border-radius: 12px;
+  margin-bottom: 20px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.06);
+}
+
+.card h2 {
+  font-size: 20px;
+  margin-bottom: 20px;
+  color: #1e293b;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.form-group {
+  margin-bottom: 15px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 6px;
+  font-weight: 600;
+  font-size: 13px;
+  color: #475569;
+}
+
+input, select, textarea {
+  width: 100%;
+  padding: 12px;
+  border: 2px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 14px;
+  transition: border-color 0.2s;
+}
+
+input:focus, select:focus, textarea:focus {
+  outline: none;
+  border-color: #667eea;
+}
+
+.grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 15px;
+}
+
+.grid-3 {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 15px;
+}
+
+@media (max-width: 768px) {
+  .grid-2, .grid-3 {
+    grid-template-columns: 1fr;
+  }
+}
+
+.alert {
+  padding: 15px 20px;
+  border-radius: 10px;
+  margin-bottom: 20px;
+  font-weight: 500;
+  display: none;
+  align-items: center;
+  gap: 10px;
+}
+
+.alert.show {
+  display: flex;
+}
+
+.alert.success {
+  background: #d1fae5;
+  color: #065f46;
+  border: 2px solid #10b981;
+}
+
+.alert.error {
+  background: #fee2e2;
+  color: #991b1b;
+  border: 2px solid #ef4444;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 15px;
+  margin-bottom: 20px;
+}
+
+.stat-card {
+  background: white;
+  padding: 20px;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+
+.stat-card .label {
+  font-size: 11px;
+  color: #64748b;
+  font-weight: 600;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+  letter-spacing: 0.5px;
+}
+
+.stat-card .value {
+  font-size: 32px;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.stat-card.blue {
+  border-left: 4px solid #667eea;
+}
+
+.stat-card.green {
+  border-left: 4px solid #10b981;
+}
+
+.stat-card.orange {
+  border-left: 4px solid #f59e0b;
+}
+
+.stat-card.purple {
+  border-left: 4px solid #8b5cf6;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+th, td {
+  padding: 12px;
+  text-align: left;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+th {
+  background: #f8fafc;
+  font-weight: 600;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #475569;
+}
+
+tr:hover {
+  background: #f8fafc;
+}
+
+.calendar {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 8px;
+  margin-top: 15px;
+}
+
+.calendar-day {
+  aspect-ratio: 1;
+  border: 2px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  position: relative;
+}
+
+.calendar-day:hover {
+  border-color: #667eea;
+  background: #f0f4ff;
+}
+
+.calendar-day.selected {
+  background: #667eea;
+  color: white;
+  border-color: #667eea;
+}
+
+.calendar-day.weekend {
+  background: #f0f9ff;
+}
+
+.calendar-day.disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.calendar-day .day-number {
+  font-weight: 700;
+  font-size: 16px;
+}
+
+.calendar-day .day-name {
+  font-size: 9px;
+  margin-top: 2px;
+  opacity: 0.8;
+}
+
+.badge {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.badge-f {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.badge-s {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.badge-n {
+  background: #1e1b4b;
+  color: #e0e7ff;
+}
+
+.badge-u {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.employee-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.employee-item {
+  background: #f8fafc;
+  padding: 15px;
+  border-radius: 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.employee-item .info {
+  display: flex;
+  gap: 15px;
+  align-items: center;
+  flex: 1;
+}
+
+.employee-item input {
+  width: auto;
+  min-width: 150px;
+}
+
+.rule-item {
+  background: #f0f9ff;
+  padding: 15px;
+  border-radius: 8px;
+  margin-bottom: 10px;
+  border-left: 3px solid #3b82f6;
+}
+
+.rule-item .rule-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.wish-item {
+  background: #f0f9ff;
+  padding: 15px;
+  border-radius: 8px;
+  margin-bottom: 10px;
+  border-left: 3px solid #3b82f6;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.wish-item.negative {
+  background: #fef2f2;
+  border-left-color: #ef4444;
+}
+
+.progress-bar {
+  width: 100%;
+  height: 6px;
+  background: rgba(255,255,255,0.2);
+  border-radius: 10px;
+  margin-top: 15px;
+  overflow: hidden;
+  display: none;
+}
+
+.progress-bar.show {
+  display: block;
+}
+
+.progress-fill {
+  height: 100%;
+  background: white;
+  transition: width 0.3s;
+  border-radius: 10px;
+}
+
+.plan-table {
+  overflow-x: auto;
+  margin-top: 15px;
+}
+
+.plan-table table {
+  min-width: 1000px;
+}
+
+.plan-table th:first-child,
+.plan-table td:first-child {
+  position: sticky;
+  left: 0;
+  background: white;
+  z-index: 10;
+}
+
+.plan-table th:first-child {
+  background: #f8fafc;
+}
+</style>
+</head>
+<body>
+
+<div class="container">
+  <div class="header">
+    <h1>📅 Dienstplan Manager Pro+</h1>
+    <div class="header-controls">
+      <input type="month" id="currentMonth" style="background: white; color: #333; font-weight: 600;">
+      <button class="btn btn-primary" onclick="generatePlan()">
+        🚀 Plan Generieren
+      </button>
+      <button class="btn btn-secondary" onclick="exportCSV()">
+        📥 CSV Export
+      </button>
+      <button class="btn btn-secondary" onclick="exportJSON()">
+        💾 Backup
+      </button>
+      <button class="btn btn-secondary" onclick="goFullscreen()">
+        ⛶ Fullscreen
+      </button>
+    </div>
+    <div class="progress-bar" id="progressBar">
+      <div class="progress-fill" id="progressFill"></div>
+    </div>
+  </div>
+
+  <div id="alertBox" class="alert"></div>
+
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab(0)">📊 Dashboard</button>
+    <button class="tab" onclick="switchTab(1)">👥 Mitarbeiter</button>
+    <button class="tab" onclick="switchTab(2)">📅 Wünsche</button>
+    <button class="tab" onclick="switchTab(3)">⚙️ Dauerregeln</button>
+    <button class="tab" onclick="switchTab(4)">📋 Dienstplan</button>
+    <button class="tab" onclick="switchTab(5)">🏖️ Urlaub</button>
+  </div>
+
+  <!-- TAB 0: Dashboard -->
+  <div class="content active" id="tab0">
+    <div class="stats-grid" id="statsGrid"></div>
+    <div class="card">
+      <h2>📈 Mitarbeiter-Statistik</h2>
+      <div style="overflow-x: auto;">
+        <table id="statsTable"></table>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB 1: Mitarbeiter -->
+  <div class="content" id="tab1">
+    <div class="card">
+      <h2>👥 Mitarbeiter verwalten</h2>
+      <div class="grid-3" style="margin-bottom: 20px;">
+        <input type="text" id="newEmpName" placeholder="Name">
+        <input type="number" id="newEmpPercent" placeholder="Prozent (z.B. 100)" min="0" max="100" value="100">
+        <button class="btn btn-primary" onclick="addEmployee()">➕ Hinzufügen</button>
+      </div>
+      <div class="employee-list" id="employeeList"></div>
+    </div>
+  </div>
+
+  <!-- TAB 2: Wünsche -->
+  <div class="content" id="tab2">
+    <div class="card" style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border-left: 4px solid #f59e0b;">
+      <h2>🏥 Saal-Nachtdienste (Sonderegelung)</h2>
+      <p style="margin-bottom: 15px; color: #92400e; font-size: 13px;">
+        <strong>Wichtig:</strong> Saal-Nachtdienste werden NICHT bei der Arbeitszeitberechnung berücksichtigt (kein Freizeitausgleich).
+      </p>
+      <div class="calendar" id="saalCalendar"></div>
+      <button class="btn btn-primary" style="margin-top: 20px; background: #f59e0b;" onclick="saveSaalNights()">
+        💾 Saal-Nächte speichern
+      </button>
+    </div>
+
+    <div class="card">
+      <h2>📅 Wünsche eintragen</h2>
+      <div class="grid-2" style="margin-bottom: 20px;">
+        <div class="form-group">
+          <label>Mitarbeiter</label>
+          <select id="wishEmployee"></select>
+        </div>
+        <div class="form-group">
+          <label>Wunsch-Art</label>
+          <select id="wishType">
+            <option value="Urlaub">Urlaub</option>
+            <option value="FREI">Frei</option>
+            <option value="Früh">Früh-Dienst</option>
+            <option value="Spät">Spät-Dienst</option>
+            <option value="Nacht">Nacht-Dienst</option>
+            <option value="KEIN_Früh">KEIN Früh-Dienst</option>
+            <option value="KEIN_Spät">KEIN Spät-Dienst</option>
+            <option value="KEIN_Nacht">KEIN Nacht-Dienst</option>
+            <option value="KEIN_WE">KEIN Wochenende</option>
+          </select>
+        </div>
+      </div>
+      <div class="calendar" id="wishCalendar"></div>
+      <button class="btn btn-primary" style="margin-top: 20px;" onclick="saveWishes()">
+        💾 Wünsche speichern
+      </button>
+    </div>
+
+    <div class="card">
+      <h2>📋 Gespeicherte Wünsche</h2>
+      <div id="wishList"></div>
+    </div>
+  </div>
+
+  <!-- TAB 3: Dauerregeln -->
+  <div class="content" id="tab3">
+    <div class="card">
+      <h2>⚙️ Dauerregeln konfigurieren</h2>
+      <p style="margin-bottom: 20px; color: #64748b;">
+        Lege fest, welche Mitarbeiter an bestimmten Wochentagen nur spezifische Schichten haben dürfen.
+      </p>
+      <div class="grid-2" style="margin-bottom: 20px;">
+        <div class="form-group">
+          <label>Mitarbeiter</label>
+          <select id="ruleEmployee"></select>
+        </div>
+        <div class="form-group">
+          <label>Wochentage auswählen</label>
+          <div id="ruleDaysContainer" style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; margin-top: 8px;">
+            <label style="display: flex; flex-direction: column; align-items: center; padding: 12px; background: #f8fafc; border-radius: 8px; cursor: pointer; border: 2px solid #e2e8f0; transition: all 0.2s;">
+              <input type="checkbox" value="1" class="rule-day-checkbox" style="width: auto; margin-bottom: 5px;">
+              <span style="font-weight: 600; font-size: 13px;">Mo</span>
+            </label>
+            <label style="display: flex; flex-direction: column; align-items: center; padding: 12px; background: #f8fafc; border-radius: 8px; cursor: pointer; border: 2px solid #e2e8f0; transition: all 0.2s;">
+              <input type="checkbox" value="2" class="rule-day-checkbox" style="width: auto; margin-bottom: 5px;">
+              <span style="font-weight: 600; font-size: 13px;">Di</span>
+            </label>
+            <label style="display: flex; flex-direction: column; align-items: center; padding: 12px; background: #f8fafc; border-radius: 8px; cursor: pointer; border: 2px solid #e2e8f0; transition: all 0.2s;">
+              <input type="checkbox" value="3" class="rule-day-checkbox" style="width: auto; margin-bottom: 5px;">
+              <span style="font-weight: 600; font-size: 13px;">Mi</span>
+            </label>
+            <label style="display: flex; flex-direction: column; align-items: center; padding: 12px; background: #f8fafc; border-radius: 8px; cursor: pointer; border: 2px solid #e2e8f0; transition: all 0.2s;">
+              <input type="checkbox" value="4" class="rule-day-checkbox" style="width: auto; margin-bottom: 5px;">
+              <span style="font-weight: 600; font-size: 13px;">Do</span>
+            </label>
+            <label style="display: flex; flex-direction: column; align-items: center; padding: 12px; background: #f8fafc; border-radius: 8px; cursor: pointer; border: 2px solid #e2e8f0; transition: all 0.2s;">
+              <input type="checkbox" value="5" class="rule-day-checkbox" style="width: auto; margin-bottom: 5px;">
+              <span style="font-weight: 600; font-size: 13px;">Fr</span>
+            </label>
+            <label style="display: flex; flex-direction: column; align-items: center; padding: 12px; background: #f8fafc; border-radius: 8px; cursor: pointer; border: 2px solid #e2e8f0; transition: all 0.2s;">
+              <input type="checkbox" value="6" class="rule-day-checkbox" style="width: auto; margin-bottom: 5px;">
+              <span style="font-weight: 600; font-size: 13px;">Sa</span>
+            </label>
+            <label style="display: flex; flex-direction: column; align-items: center; padding: 12px; background: #f8fafc; border-radius: 8px; cursor: pointer; border: 2px solid #e2e8f0; transition: all 0.2s;">
+              <input type="checkbox" value="0" class="rule-day-checkbox" style="width: auto; margin-bottom: 5px;">
+              <span style="font-weight: 600; font-size: 13px;">So</span>
+            </label>
+          </div>
+        </div>
+      </div>
+      <div class="grid-2" style="margin-bottom: 20px;">
+        <div class="form-group">
+          <label>Erlaubte Schichten</label>
+          <select id="ruleShifts" multiple style="height: 100px;">
+            <option value="Früh">Früh-Dienst</option>
+            <option value="Spät">Spät-Dienst</option>
+            <option value="Nacht">Nacht-Dienst</option>
+            <option value="FREI">Frei</option>
+          </select>
+          <small style="color: #64748b;">Mehrfachauswahl mit Strg/Cmd</small>
+        </div>
+        <div style="display: flex; align-items: flex-end;">
+          <button class="btn btn-primary" onclick="addRule()" style="width: 100%;">
+            ➕ Regel hinzufügen
+          </button>
+        </div>
+      </div>
+      <div id="ruleList"></div>
+    </div>
+  </div>
+
+  <!-- TAB 4: Dienstplan -->
+  <div class="content" id="tab4">
+    <div class="card">
+      <h2>📋 Monatsplan</h2>
+      <p style="margin-bottom: 15px; font-size: 13px; color: #64748b;">
+        <span class="badge badge-f">F</span> Früh •
+        <span class="badge badge-s">S</span> Spät •
+        <span class="badge badge-n">N</span> Nacht •
+        <span class="badge badge-u">U</span> Urlaub
+      </p>
+      <div class="plan-table" id="planTableContainer"></div>
+    </div>
+  </div>
+
+  <!-- TAB 5: Urlaub -->
+  <div class="content" id="tab5">
+    <div class="card">
+      <h2>🏖️ Urlaubsverwaltung</h2>
+      <div id="vacationList"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// Globaler State
+let STATE = {
+  employees: [
+    { name: 'Hagen', percent: 100, vacation: 30, usedVacation: 0 },
+    { name: 'Karl', percent: 80, vacation: 30, usedVacation: 0 },
+    { name: 'Birgit', percent: 80, vacation: 30, usedVacation: 0 },
+    { name: 'Jovan', percent: 100, vacation: 30, usedVacation: 0 },
+    { name: 'Constantin', percent: 100, vacation: 30, usedVacation: 0 },
+    { name: 'Katja', percent: 80, vacation: 30, usedVacation: 0 },
+    { name: 'Saalanästhesist', percent: 0, vacation: 0, usedVacation: 0 }
+  ],
+  wishes: {},
+  saalNights: {}, // Separate Saal-Nachtdienste
+  permanentRules: [],
+  plans: {},
+  currentYear: 2026,
+  currentMonth: 3,
+  history: [] // 30-Tage-Historie für Fairness
+};
+
+const SHIFT_TYPES = {
+  'Früh_1': { hours: 8, type: 'F' },
+  'Früh_2': { hours: 8, type: 'F' },
+  'Früh_3': { hours: 8, type: 'F' },
+  'Spät': { hours: 8, type: 'S' },
+  'Nacht': { hours: 8, type: 'N' },
+  'WE_Tag': { hours: 12, type: 'F' },
+  'WE_Nacht': { hours: 12, type: 'N' }
+};
+
+const HOLIDAYS_2026 = new Set([
+  '2026-01-01', '2026-04-03', '2026-04-06', '2026-05-01',
+  '2026-05-14', '2026-05-25', '2026-10-03', '2026-10-31',
+  '2026-11-18', '2026-12-25', '2026-12-26'
+]);
+
+const POOL_MEMBERS = ['Karl', 'Birgit', 'Jovan', 'Hagen'];
+
+// Auto-Save nach jeder Änderung
+function autoSave() {
+  saveState();
+}
+
+// Initialisierung
+function init() {
+  loadState();
+  const now = new Date();
+  STATE.currentYear = now.getFullYear();
+  STATE.currentMonth = now.getMonth() + 1;
+  document.getElementById('currentMonth').value = `${STATE.currentYear}-${String(STATE.currentMonth).padStart(2, '0')}`;
+  
+  document.getElementById('currentMonth').addEventListener('change', (e) => {
+    const [year, month] = e.target.value.split('-');
+    STATE.currentYear = parseInt(year);
+    STATE.currentMonth = parseInt(month);
+    autoSave();
+    updateDashboard();
+    renderWishCalendar();
+    renderSaalCalendar();
+  });
+  
+  // Checkbox Styling für Dauerregeln
+  addCheckboxStyling();
+  
+  updateEmployeeSelects();
+  updateDashboard();
+  renderEmployeeList();
+  renderWishCalendar();
+  renderSaalCalendar();
+  renderWishList();
+  renderRuleList();
+  renderVacationList();
+}
+
+// Checkbox Styling
+function addCheckboxStyling() {
+  const style = document.createElement('style');
+  style.textContent = `
+    #ruleDaysContainer label:has(input:checked) {
+      background: #667eea !important;
+      color: white !important;
+      border-color: #667eea !important;
+    }
+    #ruleDaysContainer label:has(input:checked) span {
+      color: white !important;
+    }
+    #ruleDaysContainer label:hover {
+      border-color: #667eea;
+      background: #f0f4ff;
+    }
+  `;
+  document.head.appendChild(style);
+}
+
+// LocalStorage mit Auto-Save
+function saveState() {
+  try {
+    localStorage.setItem('dienstplan_state', JSON.stringify(STATE));
+  } catch (e) {
+    console.error('Fehler beim Speichern:', e);
+    showAlert('Fehler beim Speichern der Daten', 'error');
+  }
+}
+
+function loadState() {
+  try {
+    const saved = localStorage.getItem('dienstplan_state');
+    if (saved) {
+      const loaded = JSON.parse(saved);
+      // Merge mit Defaults für neue Features
+      STATE = {
+        ...STATE,
+        ...loaded,
+        saalNights: loaded.saalNights || {}
+      };
+    }
+  } catch (e) {
+    console.error('Fehler beim Laden:', e);
+  }
+}
+
+// Alert-System
+function showAlert(message, type = 'success') {
+  const alert = document.getElementById('alertBox');
+  alert.className = `alert ${type} show`;
+  alert.textContent = message;
+  setTimeout(() => {
+    alert.classList.remove('show');
+  }, 4000);
+}
+
+// Tab-Switching
+function switchTab(index) {
+  document.querySelectorAll('.tab').forEach((tab, i) => {
+    tab.className = i === index ? 'tab active' : 'tab';
+  });
+  document.querySelectorAll('.content').forEach((content, i) => {
+    content.className = i === index ? 'content active' : 'content';
+  });
+  
+  // Update bei Tab-Wechsel
+  if (index === 0) updateDashboard();
+  if (index === 1) renderEmployeeList();
+  if (index === 2) { renderWishCalendar(); renderSaalCalendar(); renderWishList(); }
+  if (index === 3) renderRuleList();
+  if (index === 4) renderPlanTable();
+  if (index === 5) renderVacationList();
+}
+
+// MITARBEITER-MANAGEMENT
+function addEmployee() {
+  const name = document.getElementById('newEmpName').value.trim();
+  const percent = parseInt(document.getElementById('newEmpPercent').value) || 100;
+  
+  if (!name) {
+    showAlert('Bitte Namen eingeben', 'error');
+    return;
+  }
+  
+  if (STATE.employees.find(e => e.name === name)) {
+    showAlert('Mitarbeiter existiert bereits', 'error');
+    return;
+  }
+  
+  STATE.employees.push({
+    name: name,
+    percent: percent,
+    vacation: 30,
+    usedVacation: 0
+  });
+  
+  autoSave();
+  updateEmployeeSelects();
+  renderEmployeeList();
+  showAlert('Mitarbeiter hinzugefügt');
+  
+  document.getElementById('newEmpName').value = '';
+  document.getElementById('newEmpPercent').value = '100';
+}
+
+function removeEmployee(name) {
+  if (!confirm(`Mitarbeiter "${name}" wirklich löschen?`)) return;
+  
+  STATE.employees = STATE.employees.filter(e => e.name !== name);
+  
+  // Aufräumen
+  for (const key in STATE.wishes) {
+    if (STATE.wishes[key][name]) {
+      delete STATE.wishes[key][name];
+    }
+  }
+  STATE.permanentRules = STATE.permanentRules.filter(r => r.employee !== name);
+  
+  autoSave();
+  updateEmployeeSelects();
+  renderEmployeeList();
+  showAlert('Mitarbeiter gelöscht');
+}
+
+function updateEmployee(name, field, value) {
+  const emp = STATE.employees.find(e => e.name === name);
+  if (emp) {
+    if (field === 'name') {
+      // Name ändern - auch in Wünschen und Regeln aktualisieren
+      const oldName = emp.name;
+      emp.name = value;
+      
+      // Wishes aktualisieren
+      for (const key in STATE.wishes) {
+        if (STATE.wishes[key][oldName]) {
+          STATE.wishes[key][value] = STATE.wishes[key][oldName];
+          delete STATE.wishes[key][oldName];
+        }
+      }
+      
+      // Rules aktualisieren
+      STATE.permanentRules.forEach(r => {
+        if (r.employee === oldName) r.employee = value;
+      });
+    } else {
+      emp[field] = value;
+    }
+    autoSave();
+    updateEmployeeSelects();
+  }
+}
+
+function renderEmployeeList() {
+  const container = document.getElementById('employeeList');
+  container.innerHTML = STATE.employees.map(emp => `
+    <div class="employee-item">
+      <div class="info">
+        <input type="text" value="${emp.name}" 
+               onchange="updateEmployee('${emp.name}', 'name', this.value)"
+               style="font-weight: 600;">
+        <input type="number" value="${emp.percent}" min="0" max="100"
+               onchange="updateEmployee('${emp.name}', 'percent', parseInt(this.value))"
+               style="width: 100px;">
+        <span style="color: #64748b;">%</span>
+        <span style="color: #64748b; font-size: 12px;">
+          Urlaub: ${emp.vacation} Tage (genutzt: ${emp.usedVacation})
+        </span>
+      </div>
+      <button class="btn btn-danger btn-small" onclick="removeEmployee('${emp.name}')">
+        🗑️ Löschen
+      </button>
+    </div>
+  `).join('');
+}
+
+function updateEmployeeSelects() {
+  const selects = ['wishEmployee', 'ruleEmployee'];
+  selects.forEach(id => {
+    const select = document.getElementById(id);
+    if (select) {
+      select.innerHTML = STATE.employees
+        .filter(e => e.name !== 'Saalanästhesist')
+        .map(e => `<option value="${e.name}">${e.name}</option>`)
+        .join('');
+    }
+  });
+}
+
+// WÜNSCHE-KALENDER
+let selectedDays = new Set();
+let selectedSaalDays = new Set();
+
+function renderSaalCalendar() {
+  const daysInMonth = new Date(STATE.currentYear, STATE.currentMonth, 0).getDate();
+  const calendar = document.getElementById('saalCalendar');
+  
+  calendar.innerHTML = '';
+  
+  // Lade bereits gespeicherte Saal-Nächte
+  selectedSaalDays.clear();
+  for (let day = 1; day <= daysInMonth; day++) {
+    const dateKey = `${STATE.currentYear}-${STATE.currentMonth}-${day}`;
+    if (STATE.saalNights[dateKey]) {
+      selectedSaalDays.add(day);
+    }
+  }
+  
+  for (let day = 1; day <= daysInMonth; day++) {
+    const date = new Date(STATE.currentYear, STATE.currentMonth - 1, day);
+    const dayOfWeek = date.getDay();
+    const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+    const dayNames = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'];
+    
+    const dayEl = document.createElement('div');
+    dayEl.className = `calendar-day ${isWeekend ? 'weekend' : ''}`;
+    if (selectedSaalDays.has(day)) {
+      dayEl.classList.add('selected');
+      dayEl.style.background = '#f59e0b';
+      dayEl.style.borderColor = '#f59e0b';
+      dayEl.style.color = 'white';
+    }
+    
+    dayEl.innerHTML = `
+      <div class="day-number">${day}</div>
+      <div class="day-name">${dayNames[dayOfWeek]}</div>
+    `;
+    
+    dayEl.onclick = () => {
+      if (selectedSaalDays.has(day)) {
+        selectedSaalDays.delete(day);
+        dayEl.classList.remove('selected');
+        dayEl.style.background = isWeekend ? '#f0f9ff' : '';
+        dayEl.style.borderColor = '#e2e8f0';
+        dayEl.style.color = '';
+      } else {
+        selectedSaalDays.add(day);
+        dayEl.classList.add('selected');
+        dayEl.style.background = '#f59e0b';
+        dayEl.style.borderColor = '#f59e0b';
+        dayEl.style.color = 'white';
+      }
+    };
+    
+    calendar.appendChild(dayEl);
+  }
+}
+
+function saveSaalNights() {
+  if (selectedSaalDays.size === 0) {
+    showAlert('Bitte mindestens einen Tag auswählen', 'error');
+    return;
+  }
+  
+  // Lösche alte Saal-Nächte für diesen Monat
+  const daysInMonth = new Date(STATE.currentYear, STATE.currentMonth, 0).getDate();
+  for (let d = 1; d <= daysInMonth; d++) {
+    const dateKey = `${STATE.currentYear}-${STATE.currentMonth}-${d}`;
+    delete STATE.saalNights[dateKey];
+  }
+  
+  // Speichere neue Saal-Nächte
+  selectedSaalDays.forEach(day => {
+    const dateKey = `${STATE.currentYear}-${STATE.currentMonth}-${day}`;
+    STATE.saalNights[dateKey] = true;
+    
+    // Auch als Wunsch für Saalanästhesist speichern
+    if (!STATE.wishes[dateKey]) STATE.wishes[dateKey] = {};
+    STATE.wishes[dateKey]['Saalanästhesist'] = 'Nacht';
+  });
+  
+  autoSave();
+  renderWishList();
+  showAlert('Saal-Nachtdienste gespeichert');
+}
+
+function renderWishCalendar() {
+  const daysInMonth = new Date(STATE.currentYear, STATE.currentMonth, 0).getDate();
+  const calendar = document.getElementById('wishCalendar');
+  
+  calendar.innerHTML = '';
+  
+  for (let day = 1; day <= daysInMonth; day++) {
+    const date = new Date(STATE.currentYear, STATE.currentMonth - 1, day);
+    const dayOfWeek = date.getDay();
+    const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+    const dayNames = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'];
+    
+    const dayEl = document.createElement('div');
+    dayEl.className = `calendar-day ${isWeekend ? 'weekend' : ''}`;
+    if (selectedDays.has(day)) {
+      dayEl.classList.add('selected');
+    }
+    
+    dayEl.innerHTML = `
+      <div class="day-number">${day}</div>
+      <div class="day-name">${dayNames[dayOfWeek]}</div>
+    `;
+    
+    dayEl.onclick = () => {
+      if (selectedDays.has(day)) {
+        selectedDays.delete(day);
+        dayEl.classList.remove('selected');
+      } else {
+        selectedDays.add(day);
+        dayEl.classList.add('selected');
+      }
+    };
+    
+    calendar.appendChild(dayEl);
+  }
+}
+
+function saveWishes() {
+  const employee = document.getElementById('wishEmployee').value;
+  const wishType = document.getElementById('wishType').value;
+  
+  if (selectedDays.size === 0) {
+    showAlert('Bitte mindestens einen Tag auswählen', 'error');
+    return;
+  }
+  
+  selectedDays.forEach(day => {
+    const key = `${STATE.currentYear}-${STATE.currentMonth}-${day}`;
+    if (!STATE.wishes[key]) STATE.wishes[key] = {};
+    STATE.wishes[key][employee] = wishType;
+  });
+  
+  autoSave();
+  renderWishList();
+  selectedDays.clear();
+  renderWishCalendar();
+  showAlert('Wünsche gespeichert');
+}
+
+function renderWishList() {
+  const container = document.getElementById('wishList');
+  const wishes = [];
+  
+  for (const [dateKey, empWishes] of Object.entries(STATE.wishes)) {
+    const [year, month, day] = dateKey.split('-').map(Number);
+    if (year === STATE.currentYear && month === STATE.currentMonth) {
+      for (const [emp, wish] of Object.entries(empWishes)) {
+        wishes.push({ day, emp, wish, dateKey });
+      }
+    }
+  }
+  
+  wishes.sort((a, b) => a.day - b.day);
+  
+  if (wishes.length === 0) {
+    container.innerHTML = '<p style="text-align: center; color: #94a3b8; padding: 30px;">Keine Wünsche für diesen Monat</p>';
+    return;
+  }
+  
+  container.innerHTML = wishes.map(w => {
+    const isSaal = w.emp === 'Saalanästhesist';
+    const bgColor = isSaal ? '#fef3c7' : (w.wish.startsWith('KEIN') ? '#fef2f2' : '#f0f9ff');
+    const borderColor = isSaal ? '#f59e0b' : (w.wish.startsWith('KEIN') ? '#ef4444' : '#3b82f6');
+    
+    return `
+      <div class="wish-item" style="background: ${bgColor}; border-left-color: ${borderColor};">
+        <div>
+          <strong>Tag ${w.day}:</strong> ${w.emp} → 
+          ${isSaal ? '🏥 Saal-Nacht' : w.wish.replace('KEIN_', '🚫 Kein ')}
+        </div>
+        <button class="btn btn-danger btn-small" onclick="deleteWish('${w.dateKey}', '${w.emp}')">
+          ✕
+        </button>
+      </div>
+    `;
+  }).join('');
+}
+
+function deleteWish(dateKey, employee) {
+  if (STATE.wishes[dateKey]) {
+    delete STATE.wishes[dateKey][employee];
+    if (Object.keys(STATE.wishes[dateKey]).length === 0) {
+      delete STATE.wishes[dateKey];
+    }
+  }
+  
+  // Auch Saal-Nacht löschen wenn nötig
+  if (employee === 'Saalanästhesist' && STATE.saalNights[dateKey]) {
+    delete STATE.saalNights[dateKey];
+  }
+  
+  autoSave();
+  renderWishList();
+  renderSaalCalendar();
+  showAlert('Wunsch gelöscht');
+}
+
+// DAUERREGELN
+function addRule() {
+  const employee = document.getElementById('ruleEmployee').value;
+  const weekdayCheckboxes = document.querySelectorAll('.rule-day-checkbox:checked');
+  const weekdays = Array.from(weekdayCheckboxes).map(cb => parseInt(cb.value));
+  const shiftSelect = document.getElementById('ruleShifts');
+  const allowedShifts = Array.from(shiftSelect.selectedOptions).map(opt => opt.value);
+  
+  if (weekdays.length === 0) {
+    showAlert('Bitte mindestens einen Wochentag auswählen', 'error');
+    return;
+  }
+  
+  if (allowedShifts.length === 0) {
+    showAlert('Bitte mindestens eine erlaubte Schicht auswählen', 'error');
+    return;
+  }
+  
+  STATE.permanentRules.push({
+    employee,
+    weekdays,
+    allowedShifts
+  });
+  
+  autoSave();
+  renderRuleList();
+  showAlert('Regel hinzugefügt');
+  
+  // Reset
+  weekdayCheckboxes.forEach(cb => cb.checked = false);
+  shiftSelect.selectedIndex = -1;
+}
+
+function deleteRule(index) {
+  STATE.permanentRules.splice(index, 1);
+  autoSave();
+  renderRuleList();
+  showAlert('Regel gelöscht');
+}
+
+function renderRuleList() {
+  const container = document.getElementById('ruleList');
+  const dayNames = ['Sonntag', 'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag'];
+  
+  if (STATE.permanentRules.length === 0) {
+    container.innerHTML = '<p style="text-align: center; color: #94a3b8; padding: 30px;">Keine Dauerregeln definiert</p>';
+    return;
+  }
+  
+  container.innerHTML = STATE.permanentRules.map((rule, index) => `
+    <div class="rule-item">
+      <div class="rule-header">
+        <strong>${rule.employee}</strong>
+        <button class="btn btn-danger btn-small" onclick="deleteRule(${index})">
+          ✕
+        </button>
+      </div>
+      <div style="font-size: 13px; color: #475569;">
+        <div><strong>Wochentage:</strong> ${rule.weekdays.map(d => dayNames[d]).join(', ')}</div>
+        <div style="margin-top: 5px;">
+          <strong>Erlaubte Schichten:</strong> ${rule.allowedShifts.join(', ')}
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+// URLAUBSVERWALTUNG
+function renderVacationList() {
+  const container = document.getElementById('vacationList');
+  
+  container.innerHTML = STATE.employees
+    .filter(e => e.name !== 'Saalanästhesist')
+    .map(emp => {
+      const remaining = emp.vacation - emp.usedVacation;
+      const percentage = (emp.usedVacation / emp.vacation * 100).toFixed(0);
+      
+      return `
+        <div class="employee-item" style="margin-bottom: 15px;">
+          <div style="flex: 1;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+              <strong>${emp.name}</strong>
+              <span style="color: ${remaining < 5 ? '#ef4444' : '#10b981'}; font-weight: 600;">
+                ${remaining} Tage übrig
+              </span>
+            </div>
+            <div style="background: #e2e8f0; height: 8px; border-radius: 10px; overflow: hidden;">
+              <div style="background: ${remaining < 5 ? '#ef4444' : '#10b981'}; height: 100%; width: ${percentage}%; transition: width 0.3s;"></div>
+            </div>
+            <div style="font-size: 12px; color: #64748b; margin-top: 5px;">
+              Genutzt: ${emp.usedVacation} / ${emp.vacation} Tage
+            </div>
+          </div>
+          <div style="display: flex; gap: 10px; align-items: center;">
+            <input type="number" value="${emp.vacation}" min="0" 
+                   onchange="updateEmployee('${emp.name}', 'vacation', parseInt(this.value)); renderVacationList();"
+                   style="width: 80px;" placeholder="Anspruch">
+            <button class="btn btn-secondary btn-small" onclick="resetVacation('${emp.name}')">
+              🔄 Reset
+            </button>
+          </div>
+        </div>
+      `;
+    }).join('');
+}
+
+function resetVacation(name) {
+  const emp = STATE.employees.find(e => e.name === name);
+  if (emp) {
+    emp.usedVacation = 0;
+    autoSave();
+    renderVacationList();
+    showAlert('Urlaubstage zurückgesetzt');
+  }
+}
+
+// PLAN-GENERIERUNG
+async function generatePlan() {
+  const progressBar = document.getElementById('progressBar');
+  const progressFill = document.getElementById('progressFill');
+  progressBar.classList.add('show');
+  progressFill.style.width = '0%';
+  
+  const daysInMonth = new Date(STATE.currentYear, STATE.currentMonth, 0).getDate();
+  let bestPlan = null;
+  let bestScore = Infinity;
+  
+  // Optimierungsschleife
+  for (let iteration = 0; iteration < 500; iteration++) {
+    if (iteration % 50 === 0) {
+      progressFill.style.width = `${(iteration / 500 * 100).toFixed(0)}%`;
+      await new Promise(resolve => setTimeout(resolve, 10));
+    }
+    
+    const result = simulatePlan();
+    if (result && result.score < bestScore) {
+      bestScore = result.score;
+      bestPlan = result;
+    }
+  }
+  
+  progressFill.style.width = '100%';
+  
+  if (bestPlan) {
+    const planKey = `${STATE.currentYear}-${STATE.currentMonth}`;
+    STATE.plans[planKey] = bestPlan;
+    
+    // Update Historie für 30-Tage-Fairness
+    updateHistory(bestPlan);
+    
+    // Urlaubstage berechnen
+    calculateUsedVacation();
+    
+    autoSave();
+    updateDashboard();
+    renderPlanTable();
+    showAlert('Plan erfolgreich generiert! 🎉');
+    switchTab(4);
+  } else {
+    showAlert('Plan konnte nicht generiert werden. Bitte Regeln überprüfen.', 'error');
+  }
+  
+  setTimeout(() => {
+    progressBar.classList.remove('show');
+  }, 1000);
+}
+
+function simulatePlan() {
+  const daysInMonth = new Date(STATE.currentYear, STATE.currentMonth, 0).getDate();
+  const plan = {};
+  const stats = {};
+  
+  // Initialisiere Stats mit 30-Tage-Historie
+  STATE.employees.forEach(emp => {
+    if (emp.name === 'Saalanästhesist') {
+      stats[emp.name] = {
+        target: 0,
+        actual: 0,
+        early: 0,
+        late: 0,
+        night: 0,
+        weekend: 0,
+        history30: getHistory30Days(emp.name)
+      };
+    } else {
+      let target = 0;
+      for (let d = 1; d <= daysInMonth; d++) {
+        const date = new Date(STATE.currentYear, STATE.currentMonth - 1, d);
+        const isWeekend = date.getDay() === 0 || date.getDay() === 6;
+        const dateStr = date.toISOString().split('T')[0];
+        const isHoliday = HOLIDAYS_2026.has(dateStr);
+        
+        if (!isWeekend && !isHoliday) {
+          const dateKey = `${STATE.currentYear}-${STATE.currentMonth}-${d}`;
+          const wish = STATE.wishes[dateKey]?.[emp.name];
+          if (wish === 'Urlaub') {
+            target += 8 * (emp.percent / 100);
+          } else {
+            target += 8 * (emp.percent / 100);
+          }
+        }
+      }
+      
+      stats[emp.name] = {
+        target: target,
+        actual: 0,
+        early: 0,
+        late: 0,
+        night: 0,
+        weekend: 0,
+        history30: getHistory30Days(emp.name)
+      };
+    }
+  });
+  
+  // Saal-Nächte einplanen (OHNE Stundenzählung)
+  for (let d = 1; d <= daysInMonth; d++) {
+    const dateKey = `${STATE.currentYear}-${STATE.currentMonth}-${d}`;
+    if (STATE.saalNights[dateKey]) {
+      const date = new Date(STATE.currentYear, STATE.currentMonth - 1, d);
+      const isWeekend = date.getDay() === 0 || date.getDay() === 6;
+      const shift = isWeekend ? 'WE_Nacht' : 'Nacht';
+      plan[`${d}_${shift}`] = 'Saalanästhesist';
+      stats['Saalanästhesist'].night++;
+      // WICHTIG: Keine Stunden zur actual hinzufügen!
+    }
+  }
+  
+  // Wünsche einplanen
+  for (let d = 1; d <= daysInMonth; d++) {
+    const date = new Date(STATE.currentYear, STATE.currentMonth - 1, d);
+    const isWeekend = date.getDay() === 0 || date.getDay() === 6;
+    const dateKey = `${STATE.currentYear}-${STATE.currentMonth}-${d}`;
+    const dayWishes = STATE.wishes[dateKey] || {};
+    
+    for (const [emp, wish] of Object.entries(dayWishes)) {
+      if (emp === 'Saalanästhesist') continue; // Schon erledigt
+      if (wish === 'Urlaub' || wish === 'FREI' || wish.startsWith('KEIN')) continue;
+      
+      let shifts = [];
+      if (wish === 'Früh') {
+        shifts = isWeekend ? ['WE_Tag'] : ['Früh_1', 'Früh_2', 'Früh_3'];
+      } else if (wish === 'Spät') {
+        shifts = ['Spät'];
+      } else if (wish === 'Nacht') {
+        shifts = isWeekend ? ['WE_Nacht'] : ['Nacht'];
+      }
+      
+      for (const shift of shifts) {
+        const key = `${d}_${shift}`;
+        if (!plan[key] && canAssignShift(emp, d, shift, plan, stats, dayWishes)) {
+          assignShift(plan, stats, emp, d, shift);
+          break;
+        }
+      }
+    }
+  }
+  
+  // Restliche Schichten verteilen
+  for (let d = 1; d <= daysInMonth; d++) {
+    const date = new Date(STATE.currentYear, STATE.currentMonth - 1, d);
+    const isWeekend = date.getDay() === 0 || date.getDay() === 6;
+    
+    if (isWeekend) {
+      assignBestEmployee(plan, stats, d, 'WE_Tag', false);
+      assignBestEmployee(plan, stats, d, 'WE_Nacht', false);
+    } else {
+      assignBestEmployee(plan, stats, d, 'Nacht', false);
+      assignBestEmployee(plan, stats, d, 'Spät', false);
+      assignBestEmployee(plan, stats, d, 'Früh_1', false);
+      assignBestEmployee(plan, stats, d, 'Früh_2', false);
+      assignBestEmployee(plan, stats, d, 'Früh_3', true); // Pool-Mitglied
+    }
+  }
+  
+  // Score berechnen (Fairness)
+  let score = 0;
+  for (const emp of STATE.employees) {
+    if (emp.name !== 'Saalanästhesist') {
+      const diff = stats[emp.name].actual - stats[emp.name].target;
+      score += diff * diff;
+    }
+  }
+  
+  return { plan, stats, score };
+}
+
+function canAssignShift(employee, day, shift, plan, stats, dayWishes) {
+  const key = `${day}_${shift}`;
+  if (plan[key]) return false;
+  
+  const emp = STATE.employees.find(e => e.name === employee);
+  if (!emp) return false;
+  
+  const date = new Date(STATE.currentYear, STATE.currentMonth - 1, day);
+  const dayOfWeek = date.getDay();
+  const dateKey = `${STATE.currentYear}-${STATE.currentMonth}-${day}`;
+  const wish = dayWishes[employee];
+  
+  // Dauerregeln prüfen
+  const rules = STATE.permanentRules.filter(r => r.employee === employee && r.weekdays.includes(dayOfWeek));
+  if (rules.length > 0) {
+    const shiftType = SHIFT_TYPES[shift]?.type;
+    let mapping = { 'F': 'Früh', 'S': 'Spät', 'N': 'Nacht' };
+    const allowed = rules.some(r => r.allowedShifts.includes(mapping[shiftType]) || r.allowedShifts.includes('FREI'));
+    if (!allowed) return false;
+  }
+  
+  // Negative Wünsche
+  if (wish === 'KEIN_Früh' && shift.includes('Früh')) return false;
+  if (wish === 'KEIN_Spät' && shift === 'Spät') return false;
+  if (wish === 'KEIN_Nacht' && (shift === 'Nacht' || shift === 'WE_Nacht')) return false;
+  if (wish === 'KEIN_WE' && shift.startsWith('WE_')) return false;
+  if (wish === 'Urlaub' || wish === 'FREI') return false;
+  
+  // Nachtdienst-Regeln
+  if (day > 1) {
+    const prevNight = plan[`${day-1}_Nacht`] === employee || plan[`${day-1}_WE_Nacht`] === employee;
+    if (prevNight) return false;
+  }
+  
+  if (day > 2) {
+    const prev2Night = plan[`${day-2}_Nacht`] === employee || plan[`${day-2}_WE_Nacht`] === employee;
+    if (prev2Night && shift !== 'Spät') return false;
+  }
+  
+  // Doppelbelegung vermeiden
+  for (const s of Object.keys(SHIFT_TYPES)) {
+    if (plan[`${day}_${s}`] === employee) return false;
+  }
+  
+  // Max 5 Nachtdienste
+  if ((shift === 'Nacht' || shift === 'WE_Nacht') && stats[employee].night >= 5) {
+    return false;
+  }
+  
+  // Spät -> Früh vermeiden
+  if (day > 1 && plan[`${day-1}_Spät`] === employee && shift.includes('Früh')) {
+    return false;
+  }
+  
+  return true;
+}
+
+function assignShift(plan, stats, employee, day, shift) {
+  const key = `${day}_${shift}`;
+  plan[key] = employee;
+  
+  const shiftInfo = SHIFT_TYPES[shift];
+  stats[employee].actual += shiftInfo.hours;
+  
+  if (shiftInfo.type === 'F') stats[employee].early++;
+  if (shiftInfo.type === 'S') stats[employee].late++;
+  if (shiftInfo.type === 'N') stats[employee].night++;
+  if (shift.startsWith('WE_')) stats[employee].weekend++;
+}
+
+function assignBestEmployee(plan, stats, day, shift, poolOnly) {
+  const key = `${day}_${shift}`;
+  if (plan[key]) return;
+  
+  let candidates = STATE.employees
+    .filter(e => e.name !== 'Saalanästhesist')
+    .filter(e => !poolOnly || POOL_MEMBERS.includes(e.name));
+  
+  const dateKey = `${STATE.currentYear}-${STATE.currentMonth}-${day}`;
+  const dayWishes = STATE.wishes[dateKey] || {};
+  
+  // Filter nach Regeln
+  candidates = candidates.filter(emp => canAssignShift(emp.name, day, shift, plan, stats, dayWishes));
+  
+  if (candidates.length === 0) return;
+  
+  // Sortiere nach Fairness (mit 30-Tage-Historie)
+  const shiftType = SHIFT_TYPES[shift].type;
+  candidates.sort((a, b) => {
+    const statA = stats[a.name];
+    const statB = stats[b.name];
+    
+    // Zähle in Historie
+    const histCountA = statA.history30[shiftType] || 0;
+    const histCountB = statB.history30[shiftType] || 0;
+    
+    // Bevorzuge weniger Schichten in Historie
+    if (histCountA !== histCountB) return histCountA - histCountB;
+    
+    // Dann aktuelle Fairness
+    const diffA = statA.actual - statA.target;
+    const diffB = statB.actual - statB.target;
+    
+    return diffA - diffB;
+  });
+  
+  assignShift(plan, stats, candidates[0].name, day, shift);
+}
+
+function getHistory30Days(employee) {
+  const history = { F: 0, S: 0, N: 0 };
+  
+  // Suche in STATE.history
+  const now = new Date(STATE.currentYear, STATE.currentMonth - 1, 1);
+  const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+  
+  STATE.history.forEach(entry => {
+    const entryDate = new Date(entry.year, entry.month - 1, entry.day);
+    if (entryDate >= thirtyDaysAgo && entryDate < now && entry.employee === employee) {
+      history[entry.type] = (history[entry.type] || 0) + 1;
+    }
+  });
+  
+  return history;
+}
+
+function updateHistory(planResult) {
+  // Füge aktuellen Plan zur Historie hinzu
+  for (const [key, employee] of Object.entries(planResult.plan)) {
+    const [day, shift] = key.split('_');
+    const shiftType = SHIFT_TYPES[shift]?.type;
+    if (shiftType) {
+      STATE.history.push({
+        year: STATE.currentYear,
+        month: STATE.currentMonth,
+        day: parseInt(day),
+        employee: employee,
+        type: shiftType
+      });
+    }
+  }
+  
+  // Behalte nur letzte 60 Tage
+  const cutoff = new Date(STATE.currentYear, STATE.currentMonth - 1, 1);
+  cutoff.setDate(cutoff.getDate() - 60);
+  
+  STATE.history = STATE.history.filter(entry => {
+    const entryDate = new Date(entry.year, entry.month - 1, entry.day);
+    return entryDate >= cutoff;
+  });
+}
+
+function calculateUsedVacation() {
+  // Reset
+  STATE.employees.forEach(e => e.usedVacation = 0);
+  
+  // Zähle alle Urlaubstage im gesamten Jahr
+  for (const [dateKey, wishes] of Object.entries(STATE.wishes)) {
+    const [year] = dateKey.split('-').map(Number);
+    if (year === STATE.currentYear) {
+      for (const [empName, wish] of Object.entries(wishes)) {
+        if (wish === 'Urlaub') {
+          const emp = STATE.employees.find(e => e.name === empName);
+          if (emp) emp.usedVacation++;
+        }
+      }
+    }
+  }
+}
+
+// DASHBOARD
+function updateDashboard() {
+  const planKey = `${STATE.currentYear}-${STATE.currentMonth}`;
+  const currentPlan = STATE.plans[planKey];
+  
+  if (!currentPlan) {
+    document.getElementById('statsGrid').innerHTML = `
+      <div class="stat-card blue">
+        <div class="label">Status</div>
+        <div class="value" style="font-size: 18px;">Kein Plan</div>
+      </div>
+    `;
+    document.getElementById('statsTable').innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 30px; color: #94a3b8;">Bitte Plan generieren</td></tr>';
+    return;
+  }
+  
+  const daysInMonth = new Date(STATE.currentYear, STATE.currentMonth, 0).getDate();
+  let totalEarly = 0, totalLate = 0, totalNight = 0;
+  
+  for (const [key, emp] of Object.entries(currentPlan.plan)) {
+    const shift = key.split('_')[1];
+    const type = SHIFT_TYPES[shift]?.type;
+    if (type === 'F') totalEarly++;
+    if (type === 'S') totalLate++;
+    if (type === 'N') totalNight++;
+  }
+  
+  document.getElementById('statsGrid').innerHTML = `
+    <div class="stat-card blue">
+      <div class="label">Tage</div>
+      <div class="value">${daysInMonth}</div>
+    </div>
+    <div class="stat-card green">
+      <div class="label">Frühdienste</div>
+      <div class="value">${totalEarly}</div>
+    </div>
+    <div class="stat-card orange">
+      <div class="label">Spätdienste</div>
+      <div class="value">${totalLate}</div>
+    </div>
+    <div class="stat-card purple">
+      <div class="label">Nachtdienste</div>
+      <div class="value">${totalNight}</div>
+    </div>
+  `;
+  
+  // Tabelle
+  let tableHTML = '<tr><th>Name</th><th>Soll</th><th>Ist</th><th>Diff</th><th>Früh</th><th>Spät</th><th>Nacht</th><th>WE</th></tr>';
+  
+  STATE.employees.forEach(emp => {
+    const stat = currentPlan.stats[emp.name];
+    if (!stat) return;
+    
+    const diff = stat.actual - stat.target;
+    const diffColor = diff > 0 ? '#10b981' : (diff < 0 ? '#ef4444' : '#64748b');
+    
+    tableHTML += `
+      <tr>
+        <td style="font-weight: 600;">${emp.name}</td>
+        <td>${emp.name === 'Saalanästhesist' ? '-' : stat.target.toFixed(0)}</td>
+        <td>${stat.actual.toFixed(0)}</td>
+        <td style="color: ${diffColor}; font-weight: 600;">
+          ${emp.name === 'Saalanästhesist' ? '-' : (diff > 0 ? '+' : '') + diff.toFixed(0)}
+        </td>
+        <td>${emp.name === 'Saalanästhesist' ? '-' : stat.early}</td>
+        <td>${emp.name === 'Saalanästhesist' ? '-' : stat.late}</td>
+        <td>${stat.night}</td>
+        <td>${emp.name === 'Saalanästhesist' ? '-' : stat.weekend}</td>
+      </tr>
+    `;
+  });
+  
+  document.getElementById('statsTable').innerHTML = tableHTML;
+}
+
+// PLAN-TABELLE
+function renderPlanTable() {
+  const planKey = STATE.currentYear + '-' + STATE.currentMonth;
+  const currentPlan = STATE.plans[planKey];
+  
+  if (!currentPlan) {
+    document.getElementById('planTableContainer').innerHTML = '<p style="text-align: center; color: #94a3b8; padding: 40px;">Noch kein Plan generiert</p>';
+    return;
+  }
+  
+  const daysInMonth = new Date(STATE.currentYear, STATE.currentMonth, 0).getDate();
+  const dayNames = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
+  
+  var html = '<table><tr><th>Name</th>';
+  
+  for (var d = 1; d <= daysInMonth; d++) {
+    var date = new Date(STATE.currentYear, STATE.currentMonth - 1, d);
+    var dayName = dayNames[date.getDay() === 0 ? 6 : date.getDay() - 1];
+    var isWeekend = date.getDay() === 0 || date.getDay() === 6;
+    
+    html += '<th style="text-align:center;' + (isWeekend ? 'background:#e0f2fe;' : '') + '">';
+    html += '<div style="font-size:14px;font-weight:700;">' + d + '</div>';
+    html += '<div style="font-size:10px;opacity:0.7;">' + dayName + '</div>';
+    html += '</th>';
+  }
+  
+  html += '</tr>';
+  
+  STATE.employees.forEach(function(emp, empIndex) {
+    html += `<tr><td style="font-weight: 600;">${emp.name}</td>`;
+    
+    for (let d = 1; d <= daysInMonth; d++) {
+      const date = new Date(STATE.currentYear, STATE.currentMonth - 1, d);
+      const isWeekend = date.getDay() === 0 || date.getDay() === 6;
+      let badge = '';
+      
+      // Suche zugewiesene Schicht
+      for (const shift of Object.keys(SHIFT_TYPES)) {
+        if (currentPlan.plan[`${d}_${shift}`] === emp.name) {
+          const type = SHIFT_TYPES[shift].type;
+          badge = `<span class="badge badge-${type.toLowerCase()}">${type}</span>`;
+          break;
+        }
+      }
+      
+      // Wenn keine Schicht, prüfe Wünsche
+      if (!badge) {
+        const dateKey = `${STATE.currentYear}-${STATE.currentMonth}-${d}`;
+        const wish = STATE.wishes[dateKey]?.[emp.name];
+        if (wish === 'Urlaub') {
+          badge = '<span class="badge badge-u">U</span>';
+        } else if (wish === 'FREI') {
+          badge = '<span class="badge" style="background: #d1fae5; color: #065f46;">FREI</span>';
+        } else if (!isWeekend && emp.name !== 'Saalanästhesist') {
+          badge = '<span style="font-size: 10px; color: #94a3b8;">azv</span>';
+        }
+      }
+      
+      var cellStyle = 'text-align:center;cursor:pointer;' + (isWeekend ? 'background:#f0f9ff;' : '');
+      html += '<td style="' + cellStyle + '" onclick="showPopup(' + d + ',' + empIndex + ')">' + badge + '</td>';
+    }
+    
+    html += '</tr>';
+  });
+  
+  html += '</table>';
+  
+  document.getElementById('planTableContainer').innerHTML = html;
+}
+
+// CSV EXPORT
+function exportCSV() {
+  const planKey = `${STATE.currentYear}-${STATE.currentMonth}`;
+  const currentPlan = STATE.plans[planKey];
+  
+  if (!currentPlan) {
+    showAlert('Bitte zuerst Plan generieren', 'error');
+    return;
+  }
+  
+  const daysInMonth = new Date(STATE.currentYear, STATE.currentMonth, 0).getDate();
+  const dayNames = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
+  
+  let csv = 'Name;';
+  for (let d = 1; d <= daysInMonth; d++) {
+    csv += d + ';';
+  }
+  csv += 'IST;SOLL;DIFF;F;S;N;WE\n;';
+  
+  for (let d = 1; d <= daysInMonth; d++) {
+    const date = new Date(STATE.currentYear, STATE.currentMonth - 1, d);
+    const dayName = dayNames[date.getDay() === 0 ? 6 : date.getDay() - 1];
+    csv += dayName + ';';
+  }
+  csv += ';;;;;;;\n';
+  
+  STATE.employees.forEach(emp => {
+    csv += emp.name + ';';
+    
+    for (let d = 1; d <= daysInMonth; d++) {
+      let cell = '';
+      
+      for (const shift of Object.keys(SHIFT_TYPES)) {
+        if (currentPlan.plan[`${d}_${shift}`] === emp.name) {
+          cell = SHIFT_TYPES[shift].type;
+          break;
+        }
+      }
+      
+      if (!cell) {
+        const dateKey = `${STATE.currentYear}-${STATE.currentMonth}-${d}`;
+        const wish = STATE.wishes[dateKey]?.[emp.name];
+        if (wish === 'Urlaub') cell = 'U';
+        else if (wish === 'FREI') cell = 'FREI';
+        else {
+          const date = new Date(STATE.currentYear, STATE.currentMonth - 1, d);
+          if (date.getDay() !== 0 && date.getDay() !== 6 && emp.name !== 'Saalanästhesist') {
+            cell = 'azv';
+          }
+        }
+      }
+      
+      csv += cell + ';';
+    }
+    
+    const stat = currentPlan.stats[emp.name];
+    const diff = stat.actual - stat.target;
+    csv += `${stat.actual.toFixed(1)};`;
+    csv += `${emp.name === 'Saalanästhesist' ? '' : stat.target.toFixed(1)};`;
+    csv += `${emp.name === 'Saalanästhesist' ? '' : (diff > 0 ? '+' : '') + diff.toFixed(1)};`;
+    csv += `${emp.name === 'Saalanästhesist' ? '' : stat.early};`;
+    csv += `${emp.name === 'Saalanästhesist' ? '' : stat.late};`;
+    csv += `${stat.night};`;
+    csv += `${emp.name === 'Saalanästhesist' ? '' : stat.weekend}\n`;
+  });
+  
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = `Dienstplan_${STATE.currentYear}_${String(STATE.currentMonth).padStart(2, '0')}.csv`;
+  link.click();
+  
+  showAlert('CSV erfolgreich exportiert');
+}
+
+// JSON BACKUP
+function exportJSON() {
+  const json = JSON.stringify(STATE, null, 2);
+  const blob = new Blob([json], { type: 'application/json' });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = `Dienstplan_Backup_${Date.now()}.json`;
+  link.click();
+  showAlert('Backup erstellt');
+}
+
+
+var currentEditDay = 0;
+var currentEditEmpIndex = 0;
+
+function goFullscreen() {
+  if (!document.fullscreenElement) {
+    document.documentElement.requestFullscreen();
+  } else {
+    document.exitFullscreen();
+  }
+}
+
+function showPopup(day, empIndex) {
+  currentEditDay = day;
+  currentEditEmpIndex = empIndex;
+  var emp = STATE.employees[empIndex];
+  document.getElementById('popupTitle').textContent = 'Tag ' + day + ' - ' + emp.name;
+  document.getElementById('editPopup').style.display = 'block';
+}
+
+function hidePopup() {
+  document.getElementById('editPopup').style.display = 'none';
+}
+
+function applyShift(shiftType) {
+  var planKey = STATE.currentYear + '-' + STATE.currentMonth;
+  var currentPlan = STATE.plans[planKey];
+  
+  if (!currentPlan) {
+    showAlert('Bitte zuerst Plan generieren', 'error');
+    hidePopup();
+    return;
+  }
+  
+  var emp = STATE.employees[currentEditEmpIndex];
+  var empName = emp.name;
+  
+  for (var shiftName in SHIFT_TYPES) {
+    var key = currentEditDay + '_' + shiftName;
+    if (currentPlan.plan[key] === empName) {
+      delete currentPlan.plan[key];
+      
+      if (currentPlan.stats[empName]) {
+        var shiftInfo = SHIFT_TYPES[shiftName];
+        currentPlan.stats[empName].actual -= shiftInfo.hours;
+        if (shiftInfo.type === 'F') currentPlan.stats[empName].early--;
+        if (shiftInfo.type === 'S') currentPlan.stats[empName].late--;
+        if (shiftInfo.type === 'N') currentPlan.stats[empName].night--;
+        if (shiftName.indexOf('WE_') === 0) currentPlan.stats[empName].weekend--;
+      }
+    }
+  }
+  
+  if (shiftType) {
+    var date = new Date(STATE.currentYear, STATE.currentMonth - 1, currentEditDay);
+    var isWeekend = date.getDay() === 0 || date.getDay() === 6;
+    
+    var targetShift = '';
+    if (shiftType === 'F') targetShift = isWeekend ? 'WE_Tag' : 'Früh_1';
+    else if (shiftType === 'S') targetShift = 'Spät';
+    else if (shiftType === 'N') targetShift = isWeekend ? 'WE_Nacht' : 'Nacht';
+    
+    if (targetShift && SHIFT_TYPES[targetShift]) {
+      currentPlan.plan[currentEditDay + '_' + targetShift] = empName;
+      
+      if (!currentPlan.stats[empName]) {
+        currentPlan.stats[empName] = {target:0,actual:0,early:0,late:0,night:0,weekend:0,history30:{}};
+      }
+      
+      var shiftInfo = SHIFT_TYPES[targetShift];
+      currentPlan.stats[empName].actual += shiftInfo.hours;
+      if (shiftInfo.type === 'F') currentPlan.stats[empName].early++;
+      if (shiftInfo.type === 'S') currentPlan.stats[empName].late++;
+      if (shiftInfo.type === 'N') currentPlan.stats[empName].night++;
+      if (targetShift.indexOf('WE_') === 0) currentPlan.stats[empName].weekend++;
+    }
+  }
+  
+  saveState();
+  updateDashboard();
+  renderPlanTable();
+  showAlert('Schicht aktualisiert!', 'success');
+  hidePopup();
+}
+
+// Start
+window.addEventListener('DOMContentLoaded', init);
+</script>
+
+
+<div id="editPopup" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); z-index:9999;">
+  <div style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); background:white; padding:30px; border-radius:15px; min-width:320px;">
+    <h2 id="popupTitle" style="margin-bottom:20px;">Schicht ändern</h2>
+    <div>
+      <button onclick="applyShift('F')" style="display:block; width:100%; padding:18px; margin:8px 0; font-size:18px; font-weight:600; background:#dbeafe; border:none; border-radius:10px; cursor:pointer;">☀️ Früh</button>
+      <button onclick="applyShift('S')" style="display:block; width:100%; padding:18px; margin:8px 0; font-size:18px; font-weight:600; background:#fef3c7; border:none; border-radius:10px; cursor:pointer;">🌅 Spät</button>
+      <button onclick="applyShift('N')" style="display:block; width:100%; padding:18px; margin:8px 0; font-size:18px; font-weight:600; background:#1e1b4b; color:white; border:none; border-radius:10px; cursor:pointer;">🌙 Nacht</button>
+      <button onclick="applyShift('')" style="display:block; width:100%; padding:18px; margin:8px 0; font-size:18px; font-weight:600; background:#fee2e2; border:none; border-radius:10px; cursor:pointer;">🗑️ Löschen</button>
+      <button onclick="hidePopup()" style="display:block; width:100%; padding:18px; margin:15px 0 0 0; font-size:18px; font-weight:600; background:#e2e8f0; border:none; border-radius:10px; cursor:pointer;">❌ Abbrechen</button>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
