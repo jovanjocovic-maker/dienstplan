@@ -1,0 +1,1382 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#1e3a5f">
+    <title>Jovans Dienstplaner</title>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #1e3a5f;
+            --primary-light: #2d5a8a;
+            --accent: #00b894;
+            --accent-dark: #00a381;
+            --warning: #fdcb6e;
+            --danger: #e74c3c;
+            --success: #27ae60;
+            --bg: #f0f4f8;
+            --card: #ffffff;
+            --text: #1a1a2e;
+            --text-muted: #6b7c93;
+            --border: #e1e8ef;
+            --early: #dfe6fd;
+            --early-text: #3b5998;
+            --late: #fff4e6;
+            --late-text: #b45309;
+            --night: #1a1a2e;
+            --night-text: #a5b4fc;
+            --weekend: #d1fae5;
+            --weekend-text: #047857;
+            --azv: #fef3c7;
+            --azv-text: #92400e;
+            --shadow: 0 4px 20px rgba(30, 58, 95, 0.1);
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body { font-family: 'DM Sans', -apple-system, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+        
+        .header { background: linear-gradient(135deg, var(--primary), var(--primary-light)); padding: 16px; color: white; position: sticky; top: 0; z-index: 100; box-shadow: var(--shadow); }
+        .header-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+        .header h1 { font-size: 20px; font-weight: 700; }
+        .header-controls { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+        .month-nav { display: flex; align-items: center; gap: 4px; background: rgba(255,255,255,0.15); border-radius: 10px; padding: 4px; }
+        .month-nav button { width: 36px; height: 36px; border: none; background: transparent; color: white; font-size: 18px; border-radius: 8px; cursor: pointer; }
+        .month-nav button:hover { background: rgba(255,255,255,0.2); }
+        .month-label { font-family: 'JetBrains Mono', monospace; font-size: 15px; padding: 0 12px; min-width: 110px; text-align: center; }
+        
+        .action-btn { height: 36px; padding: 0 14px; border: none; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; }
+        .btn-generate { background: var(--accent); color: white; }
+        .btn-generate:hover { background: var(--accent-dark); }
+        .btn-export { background: rgba(255,255,255,0.2); color: white; }
+        
+        .tabs { display: flex; background: var(--card); border-bottom: 1px solid var(--border); position: sticky; top: 76px; z-index: 99; overflow-x: auto; }
+        .tab { flex: 1; padding: 14px 8px; border: none; background: none; font-size: 13px; font-weight: 600; color: var(--text-muted); cursor: pointer; border-bottom: 3px solid transparent; white-space: nowrap; min-width: 70px; }
+        .tab.active { color: var(--primary); border-bottom-color: var(--primary); }
+        
+        main { padding: 16px; max-width: 1200px; margin: 0 auto; }
+        .page { display: none; }
+        .page.active { display: block; }
+        
+        .card { background: var(--card); border-radius: 16px; padding: 20px; margin-bottom: 16px; box-shadow: var(--shadow); }
+        .card-title { font-size: 16px; font-weight: 700; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+        
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 10px; margin-bottom: 16px; }
+        .stat-card { background: var(--primary); color: white; padding: 14px; border-radius: 12px; text-align: center; }
+        .stat-card.warning { background: var(--warning); color: var(--text); }
+        .stat-card.danger { background: var(--danger); }
+        .stat-card.success { background: var(--success); }
+        .stat-value { font-size: 24px; font-weight: 700; }
+        .stat-label { font-size: 11px; opacity: 0.9; }
+        
+        .form-group { margin-bottom: 16px; }
+        .form-label { display: block; font-size: 12px; font-weight: 600; color: var(--text-muted); margin-bottom: 6px; text-transform: uppercase; }
+        .form-input, .form-select { width: 100%; padding: 12px; border: 2px solid var(--border); border-radius: 10px; font-size: 15px; background: white; }
+        .form-input:focus, .form-select:focus { outline: none; border-color: var(--primary); }
+        .form-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; }
+        
+        .btn { padding: 12px 20px; border: none; border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer; }
+        .btn-primary { background: var(--accent); color: white; width: 100%; }
+        .btn-primary:hover { background: var(--accent-dark); }
+        .btn-danger { background: var(--danger); color: white; }
+        .btn-secondary { background: var(--bg); color: var(--text); }
+        
+        .emp-list { display: flex; flex-direction: column; gap: 10px; }
+        .emp-item { display: flex; align-items: center; gap: 12px; padding: 14px; background: var(--bg); border-radius: 12px; }
+        .emp-avatar { width: 42px; height: 42px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; color: white; font-size: 16px; }
+        .emp-avatar.fa { background: var(--primary); }
+        .emp-avatar.aa { background: var(--accent); }
+        .emp-info { flex: 1; }
+        .emp-name { font-weight: 600; }
+        .emp-details { font-size: 13px; color: var(--text-muted); }
+        .btn-icon { width: 32px; height: 32px; border: none; border-radius: 8px; background: white; cursor: pointer; font-size: 14px; }
+        .btn-icon.danger:hover { background: var(--danger); color: white; }
+        
+        .btn-grid { display: flex; flex-wrap: wrap; gap: 8px; }
+        .toggle-btn { padding: 10px 14px; border: 2px solid var(--border); border-radius: 8px; background: white; font-weight: 600; cursor: pointer; font-size: 13px; }
+        .toggle-btn:hover { border-color: var(--primary); }
+        .toggle-btn.active { background: var(--primary); border-color: var(--primary); color: white; }
+        
+        .rule-item { display: flex; align-items: center; justify-content: space-between; padding: 14px; background: var(--bg); border-radius: 10px; margin-bottom: 10px; }
+        .rule-name { font-weight: 600; }
+        .rule-details { font-size: 13px; color: var(--text-muted); }
+        
+        .plan-wrapper { overflow-x: auto; margin: 0 -20px; padding: 0 20px; }
+        .plan-table { width: 100%; border-collapse: separate; border-spacing: 2px; min-width: 600px; }
+        .plan-table th, .plan-table td { padding: 6px 3px; text-align: center; font-size: 11px; }
+        .plan-table th { background: var(--primary); color: white; font-weight: 600; border-radius: 4px; }
+        .plan-table td:first-child { background: var(--bg); font-weight: 600; border-radius: 4px; white-space: nowrap; font-size: 10px; }
+        
+        .plan-cell { border-radius: 4px; padding: 4px 2px; font-size: 10px; font-weight: 600; cursor: pointer; transition: transform 0.1s; min-height: 24px; }
+        .plan-cell:hover { transform: scale(1.15); box-shadow: var(--shadow); position: relative; z-index: 5; }
+        .plan-cell.early { background: var(--early); color: var(--early-text); }
+        .plan-cell.late { background: var(--late); color: var(--late-text); }
+        .plan-cell.night { background: var(--night); color: var(--night-text); }
+        .plan-cell.weekend { background: var(--weekend); color: var(--weekend-text); }
+        .plan-cell.azv { background: var(--azv); color: var(--azv-text); }
+        .plan-cell.free { background: #f3f4f6; color: #9ca3af; }
+        .plan-cell.empty { background: var(--danger); color: white; }
+        .plan-cell.saal { background: #7c3aed; color: white; }
+        .plan-cell.urlaub { background: #fecaca; color: #991b1b; font-weight: bold; }
+        .plan-cell.frei-wish { background: #e0e7ff; color: #3730a3; }
+        
+        .day-header.weekend { background: var(--weekend-text) !important; }
+        .day-header.holiday { background: var(--danger) !important; }
+        
+        .emp-stats-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+        .emp-stats-table th, .emp-stats-table td { padding: 8px 6px; text-align: left; border-bottom: 1px solid var(--border); }
+        .emp-stats-table th { background: var(--bg); font-size: 10px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; }
+        
+        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+        .calendar-header { padding: 6px; text-align: center; font-weight: 600; font-size: 11px; color: var(--text-muted); }
+        .calendar-day { aspect-ratio: 1; padding: 4px; border: 2px solid var(--border); border-radius: 8px; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 12px; min-height: 40px; }
+        .calendar-day:hover { border-color: var(--primary); background: var(--bg); }
+        .calendar-day.weekend { background: var(--weekend); }
+        .calendar-day.holiday { background: #fee2e2; }
+        .calendar-day.selected { border-color: var(--primary); background: rgba(30,58,95,0.15); }
+        .calendar-day.selected-saal { border-color: #7c3aed; background: rgba(124,58,237,0.15); }
+        .calendar-day.has-wish { border-color: var(--accent); background: rgba(0,184,148,0.1); }
+        .calendar-day .day-number { font-weight: 700; }
+        .calendar-day .wish-indicator { font-size: 8px; color: var(--accent-dark); margin-top: 1px; }
+        
+        .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: none; align-items: center; justify-content: center; z-index: 1000; padding: 20px; }
+        .modal-overlay.active { display: flex; }
+        .modal { background: white; border-radius: 16px; padding: 24px; max-width: 400px; width: 100%; max-height: 80vh; overflow-y: auto; }
+        .modal-title { font-size: 18px; font-weight: 700; margin-bottom: 16px; }
+        .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; }
+        
+        .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%) translateY(100px); background: var(--text); color: white; padding: 12px 24px; border-radius: 10px; font-weight: 600; z-index: 2000; transition: transform 0.3s; }
+        .toast.show { transform: translateX(-50%) translateY(0); }
+        .toast.success { background: var(--success); }
+        .toast.error { background: var(--danger); }
+        
+        .info-box { background: #e0f2fe; border-left: 4px solid #0284c7; padding: 12px; border-radius: 0 8px 8px 0; margin-bottom: 16px; font-size: 13px; }
+        
+        @media (max-width: 600px) {
+            .header-controls { justify-content: center; }
+            .tab { min-width: 55px; font-size: 11px; padding: 12px 4px; }
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="header-top">
+            <h1>📋 Dienstplaner</h1>
+        </div>
+        <div class="header-controls">
+            <div class="month-nav">
+                <button onclick="changeMonth(-1)">◀</button>
+                <span class="month-label" id="monthLabel">Jan 2026</span>
+                <button onclick="changeMonth(1)">▶</button>
+            </div>
+            <button class="action-btn btn-generate" onclick="generatePlan()">🎲 Generieren</button>
+            <button class="action-btn btn-export" onclick="exportCSV()">📊 CSV</button>
+        </div>
+    </header>
+
+    <nav class="tabs">
+        <button class="tab active" onclick="showPage('plan', this)">📋 Plan</button>
+        <button class="tab" onclick="showPage('employees', this)">👥 Team</button>
+        <button class="tab" onclick="showPage('wishes', this)">📝 Wünsche</button>
+        <button class="tab" onclick="showPage('rules', this)">⚙️ Regeln</button>
+    </nav>
+
+    <main>
+        <!-- PLAN PAGE -->
+        <div id="page-plan" class="page active">
+            <div id="statsGrid" class="stats-grid"></div>
+            <div class="card">
+                <div class="card-title">📅 Dienstplan</div>
+                <div class="plan-wrapper"><div id="planGrid"></div></div>
+            </div>
+            <div class="card">
+                <div class="card-title">📊 Mitarbeiter-Statistik</div>
+                <div id="statsTable"></div>
+            </div>
+        </div>
+
+        <!-- EMPLOYEES PAGE -->
+        <div id="page-employees" class="page">
+            <div class="card">
+                <div class="card-title">➕ Neuer Mitarbeiter</div>
+                <div class="form-row">
+                    <div class="form-group"><label class="form-label">Name</label><input type="text" class="form-input" id="empName"></div>
+                    <div class="form-group"><label class="form-label">Prozent</label><input type="number" class="form-input" id="empPercent" value="100"></div>
+                    <div class="form-group"><label class="form-label">Urlaub</label><input type="number" class="form-input" id="empVacation" value="30"></div>
+                    <div class="form-group"><label class="form-label">Rolle</label><select class="form-select" id="empRole"><option value="FA">Facharzt (FA)</option><option value="AA">Assistenzarzt (AA)</option></select></div>
+                </div>
+                <button class="btn btn-primary" onclick="addEmployee()">+ Hinzufügen</button>
+            </div>
+            <div class="card">
+                <div class="card-title">👥 Team</div>
+                <div id="empList" class="emp-list"></div>
+            </div>
+        </div>
+
+        <!-- WISHES PAGE -->
+        <div id="page-wishes" class="page">
+            <!-- Saal-Nächte -->
+            <div class="card">
+                <div class="card-title">🏥 Saalanästhesist Nachtdienste</div>
+                <div class="info-box">Klicke auf Tage wo der Saalanästhesist Nachtdienst hat</div>
+                <div id="saalCalendar" class="calendar-grid"></div>
+                <button class="btn btn-primary" style="margin-top:12px" onclick="saveSaalNights()">💾 Saal-Nächte speichern</button>
+            </div>
+            
+            <!-- Wünsche -->
+            <div class="card">
+                <div class="card-title">📝 Wunsch eintragen</div>
+                <div class="form-row">
+                    <div class="form-group"><label class="form-label">Mitarbeiter</label><select class="form-select" id="wishEmp"></select></div>
+                    <div class="form-group"><label class="form-label">Wunschtyp</label><select class="form-select" id="wishType">
+                        <optgroup label="🚫 Abwesend">
+                            <option value="Urlaub">🏖️ Urlaub</option>
+                            <option value="FREI">📅 Frei (AZV)</option>
+                        </optgroup>
+                        <optgroup label="✅ Schichtwunsch">
+                            <option value="Frueh">🌅 Früh wünschen</option>
+                            <option value="Spaet">🌆 Spät wünschen</option>
+                            <option value="Nacht">🌙 Nacht wünschen</option>
+                        </optgroup>
+                        <optgroup label="❌ Nicht möglich">
+                            <option value="KEIN_Frueh">❌ KEIN Früh</option>
+                            <option value="KEIN_Spaet">❌ KEIN Spät</option>
+                            <option value="KEIN_Nacht">❌ KEIN Nacht</option>
+                            <option value="KEIN_WE">❌ KEIN Wochenende</option>
+                        </optgroup>
+                    </select></div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Tage auswählen</label>
+                    <div id="wishCalendar" class="calendar-grid"></div>
+                </div>
+                <button class="btn btn-primary" onclick="addWish()">+ Wunsch speichern</button>
+            </div>
+            
+            <div class="card">
+                <div class="card-title">📋 Gespeicherte Wünsche</div>
+                <div id="wishList"></div>
+            </div>
+        </div>
+
+        <!-- RULES PAGE -->
+        <div id="page-rules" class="page">
+            <div class="card">
+                <div class="card-title">⚙️ Neue Dauerregel</div>
+                <div class="info-box">Dauerregeln gelten jeden Monat automatisch. Z.B. "Montags nur Früh oder FREI"</div>
+                <div class="form-group"><label class="form-label">Mitarbeiter</label><select class="form-select" id="ruleEmp"></select></div>
+                <div class="form-group"><label class="form-label">Wochentage</label><div id="ruleWeekdays" class="btn-grid"></div></div>
+                <div class="form-group"><label class="form-label">Erlaubte Schichten</label><div id="ruleShifts" class="btn-grid"></div></div>
+                <button class="btn btn-primary" onclick="addRule()">+ Regel hinzufügen</button>
+            </div>
+            <div class="card">
+                <div class="card-title">📜 Aktive Dauerregeln</div>
+                <div id="ruleList"></div>
+            </div>
+        </div>
+    </main>
+
+    <div class="toast" id="toast"></div>
+
+    <div class="modal-overlay" id="editModal">
+        <div class="modal">
+            <div class="modal-title" id="editTitle">Bearbeiten</div>
+            <p id="editInfo" style="color:var(--text-muted);margin-bottom:16px"></p>
+            <div id="editOptions"></div>
+            <div class="modal-actions"><button class="btn btn-secondary" onclick="closeModal('editModal')">Abbrechen</button></div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="deleteModal">
+        <div class="modal">
+            <div class="modal-title">Löschen?</div>
+            <p id="deleteText"></p>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onclick="closeModal('deleteModal')">Abbrechen</button>
+                <button class="btn btn-danger" onclick="confirmDelete()">Löschen</button>
+            </div>
+        </div>
+    </div>
+
+<script>
+// ========== KONFIGURATION ==========
+const SHIFT_TYPES = {
+    'Frueh': { hours: 8, type: 'F', label: 'F', requiresFa: true },
+    'Spaet': { hours: 8, type: 'S', label: 'S' },
+    'Nacht': { hours: 10, type: 'N', label: 'N' },
+    'WE_Tag': { hours: 12, type: 'F', label: 'WT', isWeekend: true },
+    'WE_Nacht': { hours: 12, type: 'N', label: 'WN', isWeekend: true }
+};
+
+const MONTHS = ['Januar','Februar','März','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'];
+const DAYS = ['Mo','Di','Mi','Do','Fr','Sa','So'];
+
+let data = {
+    employees: [
+        { name: 'Hagen', percent: 100, vacation: 30, role: 'FA' },
+        { name: 'Karl', percent: 80, vacation: 30, role: 'FA' },
+        { name: 'Birgit', percent: 80, vacation: 30, role: 'FA' },
+        { name: 'Jovan', percent: 100, vacation: 30, role: 'FA' },
+        { name: 'Constantin', percent: 100, vacation: 30, role: 'AA' },
+        { name: 'Katja', percent: 80, vacation: 30, role: 'AA' }
+    ],
+    wishes: {},
+    saalNights: {},
+    permanentRules: [],
+    currentYear: new Date().getFullYear(),
+    currentMonth: new Date().getMonth() + 1,
+    currentPlan: null,
+    currentStats: null
+};
+
+let deleteCallback = null;
+let selectedWishDays = new Set();
+let selectedSaalDays = new Set();
+let selectedRuleWeekdays = new Set();
+let selectedRuleShifts = new Set();
+
+// ========== FEIERTAGE (alle Jahre) ==========
+function getHolidays(year) {
+    const h = new Map();
+    const fmt = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    const add = (d, n) => { const r = new Date(d); r.setDate(r.getDate() + n); return r; };
+    
+    // Feste Feiertage
+    h.set(`${year}-01-01`, 'Neujahr');
+    h.set(`${year}-01-06`, 'Hl. Drei Könige');
+    h.set(`${year}-05-01`, 'Tag der Arbeit');
+    h.set(`${year}-10-03`, 'Tag der Einheit');
+    h.set(`${year}-11-01`, 'Allerheiligen');
+    h.set(`${year}-12-25`, '1. Weihnachtstag');
+    h.set(`${year}-12-26`, '2. Weihnachtstag');
+    
+    // Ostern (Gauss)
+    const a=year%19, b=Math.floor(year/100), c=year%100, d=Math.floor(b/4), e=b%4;
+    const f=Math.floor((b+8)/25), g=Math.floor((b-f+1)/3), hh=(19*a+b-d-g+15)%30;
+    const i=Math.floor(c/4), k=c%4, l=(32+2*e+2*i-hh-k)%7, m=Math.floor((a+11*hh+22*l)/451);
+    const mo=Math.floor((hh+l-7*m+114)/31), dy=((hh+l-7*m+114)%31)+1;
+    const easter = new Date(year, mo-1, dy);
+    
+    h.set(fmt(add(easter,-2)), 'Karfreitag');
+    h.set(fmt(easter), 'Ostersonntag');
+    h.set(fmt(add(easter,1)), 'Ostermontag');
+    h.set(fmt(add(easter,39)), 'Christi Himmelfahrt');
+    h.set(fmt(add(easter,49)), 'Pfingstsonntag');
+    h.set(fmt(add(easter,50)), 'Pfingstmontag');
+    h.set(fmt(add(easter,60)), 'Fronleichnam');
+    
+    // Buß- und Bettag
+    const nov23 = new Date(year, 10, 23);
+    const bbt = new Date(nov23);
+    bbt.setDate(23 - ((nov23.getDay() + 4) % 7));
+    h.set(fmt(bbt), 'Buß- und Bettag');
+    
+    return h;
+}
+
+function getDaysInMonth(y, m) { return new Date(y, m, 0).getDate(); }
+function isWEorHoliday(d, holidays) {
+    const dt = new Date(data.currentYear, data.currentMonth - 1, d);
+    const iso = `${data.currentYear}-${String(data.currentMonth).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    return dt.getDay() === 0 || dt.getDay() === 6 || holidays.has(iso);
+}
+function getWeekday(d) {
+    const dt = new Date(data.currentYear, data.currentMonth - 1, d);
+    return dt.getDay() === 0 ? 6 : dt.getDay() - 1; // 0=Mo, 6=So
+}
+
+// ========== INIT ==========
+function init() {
+    const saved = localStorage.getItem('dienstplaner_v15');
+    if (saved) data = { ...data, ...JSON.parse(saved) };
+    updateMonthLabel();
+    renderAll();
+}
+
+function saveData() { localStorage.setItem('dienstplaner_v15', JSON.stringify(data)); }
+function showToast(msg, type = '') { const t = document.getElementById('toast'); t.textContent = msg; t.className = 'toast show ' + type; setTimeout(() => t.classList.remove('show'), 3000); }
+function openModal(id) { document.getElementById(id).classList.add('active'); }
+function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+function updateMonthLabel() { document.getElementById('monthLabel').textContent = `${MONTHS[data.currentMonth - 1].substring(0,3)} ${data.currentYear}`; }
+
+function changeMonth(delta) {
+    data.currentMonth += delta;
+    if (data.currentMonth > 12) { data.currentMonth = 1; data.currentYear++; }
+    if (data.currentMonth < 1) { data.currentMonth = 12; data.currentYear--; }
+    data.currentPlan = null; data.currentStats = null;
+    saveData(); updateMonthLabel(); renderAll();
+}
+
+function showPage(pageId, btn) {
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.getElementById('page-' + pageId).classList.add('active');
+    if (btn) btn.classList.add('active');
+    if (pageId === 'wishes') { loadSaalDays(); renderWishes(); }
+    if (pageId === 'rules') renderRules();
+}
+
+// ========== EMPLOYEES ==========
+function addEmployee() {
+    const name = document.getElementById('empName').value.trim();
+    if (!name || data.employees.some(e => e.name === name)) { showToast('Ungültiger Name!', 'error'); return; }
+    data.employees.push({ name, percent: parseInt(document.getElementById('empPercent').value) || 100, vacation: parseInt(document.getElementById('empVacation').value) || 30, role: document.getElementById('empRole').value });
+    document.getElementById('empName').value = '';
+    saveData(); renderEmployees(); showToast('Hinzugefügt!', 'success');
+}
+
+function deleteEmployee(name) {
+    deleteCallback = () => { data.employees = data.employees.filter(e => e.name !== name); data.permanentRules = data.permanentRules.filter(r => r.employee !== name); saveData(); renderAll(); };
+    document.getElementById('deleteText').textContent = `"${name}" wirklich löschen?`;
+    openModal('deleteModal');
+}
+
+function confirmDelete() { if (deleteCallback) deleteCallback(); deleteCallback = null; closeModal('deleteModal'); }
+
+function renderEmployees() {
+    document.getElementById('empList').innerHTML = data.employees.length === 0 ? '<div style="text-align:center;color:var(--text-muted)">Keine Mitarbeiter</div>' :
+        data.employees.map(e => `<div class="emp-item"><div class="emp-avatar ${e.role.toLowerCase()}">${e.name[0]}</div><div class="emp-info"><div class="emp-name">${e.name}</div><div class="emp-details">${e.role} · ${e.percent}% · ${e.vacation}d Urlaub</div></div><button class="btn-icon danger" onclick="deleteEmployee('${e.name}')">✕</button></div>`).join('');
+}
+
+// ========== SAAL NIGHTS ==========
+function loadSaalDays() {
+    selectedSaalDays.clear();
+    const days = getDaysInMonth(data.currentYear, data.currentMonth);
+    for (let d = 1; d <= days; d++) {
+        const dk = `${data.currentYear}-${data.currentMonth}-${d}`;
+        if (data.saalNights[dk]) selectedSaalDays.add(d);
+    }
+    renderSaalCalendar();
+}
+
+function renderSaalCalendar() {
+    const days = getDaysInMonth(data.currentYear, data.currentMonth);
+    const first = new Date(data.currentYear, data.currentMonth - 1, 1).getDay();
+    const offset = first === 0 ? 6 : first - 1;
+    const holidays = getHolidays(data.currentYear);
+    
+    let html = DAYS.map(d => `<div class="calendar-header">${d}</div>`).join('');
+    for (let i = 0; i < offset; i++) html += '<div></div>';
+    
+    for (let d = 1; d <= days; d++) {
+        const dt = new Date(data.currentYear, data.currentMonth - 1, d);
+        const iso = `${data.currentYear}-${String(data.currentMonth).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+        const isWE = dt.getDay() === 0 || dt.getDay() === 6;
+        const isHol = holidays.has(iso);
+        const sel = selectedSaalDays.has(d);
+        
+        let cls = 'calendar-day';
+        if (isWE) cls += ' weekend';
+        if (isHol) cls += ' holiday';
+        if (sel) cls += ' selected-saal';
+        
+        html += `<div class="${cls}" onclick="toggleSaalDay(${d})"><span class="day-number">${d}</span>${sel ? '<span class="wish-indicator">SAAL</span>' : ''}</div>`;
+    }
+    document.getElementById('saalCalendar').innerHTML = html;
+}
+
+function toggleSaalDay(d) {
+    selectedSaalDays.has(d) ? selectedSaalDays.delete(d) : selectedSaalDays.add(d);
+    renderSaalCalendar();
+}
+
+function saveSaalNights() {
+    const days = getDaysInMonth(data.currentYear, data.currentMonth);
+    for (let d = 1; d <= days; d++) {
+        const dk = `${data.currentYear}-${data.currentMonth}-${d}`;
+        if (selectedSaalDays.has(d)) data.saalNights[dk] = true;
+        else delete data.saalNights[dk];
+    }
+    saveData();
+    showToast('Saal-Nächte gespeichert!', 'success');
+}
+
+// ========== WISHES ==========
+function renderWishes() {
+    const sel = document.getElementById('wishEmp');
+    const cv = sel.value;
+    sel.innerHTML = data.employees.filter(e => e.percent > 0).map(e => `<option value="${e.name}">${e.name}</option>`).join('');
+    if (cv && data.employees.some(e => e.name === cv)) sel.value = cv;
+    renderWishCalendar();
+    renderWishList();
+}
+
+function renderWishCalendar() {
+    const days = getDaysInMonth(data.currentYear, data.currentMonth);
+    const first = new Date(data.currentYear, data.currentMonth - 1, 1).getDay();
+    const offset = first === 0 ? 6 : first - 1;
+    const holidays = getHolidays(data.currentYear);
+    const emp = document.getElementById('wishEmp').value;
+    
+    let html = DAYS.map(d => `<div class="calendar-header">${d}</div>`).join('');
+    for (let i = 0; i < offset; i++) html += '<div></div>';
+    
+    for (let d = 1; d <= days; d++) {
+        const dt = new Date(data.currentYear, data.currentMonth - 1, d);
+        const iso = `${data.currentYear}-${String(data.currentMonth).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+        const isWE = dt.getDay() === 0 || dt.getDay() === 6;
+        const isHol = holidays.has(iso);
+        const dk = `${data.currentYear}-${data.currentMonth}-${d}`;
+        const wish = data.wishes[dk]?.[emp];
+        const sel = selectedWishDays.has(d);
+        
+        let cls = 'calendar-day';
+        if (isWE) cls += ' weekend';
+        if (isHol) cls += ' holiday';
+        if (sel) cls += ' selected';
+        if (wish) cls += ' has-wish';
+        
+        html += `<div class="${cls}" onclick="toggleWishDay(${d})"><span class="day-number">${d}</span>${wish ? `<span class="wish-indicator">${wish.substring(0,4)}</span>` : ''}</div>`;
+    }
+    document.getElementById('wishCalendar').innerHTML = html;
+}
+
+function toggleWishDay(d) { selectedWishDays.has(d) ? selectedWishDays.delete(d) : selectedWishDays.add(d); renderWishCalendar(); }
+
+function addWish() {
+    const emp = document.getElementById('wishEmp').value;
+    const type = document.getElementById('wishType').value;
+    if (!emp || selectedWishDays.size === 0) { showToast('Tage wählen!', 'error'); return; }
+    for (const d of selectedWishDays) { const dk = `${data.currentYear}-${data.currentMonth}-${d}`; if (!data.wishes[dk]) data.wishes[dk] = {}; data.wishes[dk][emp] = type; }
+    selectedWishDays.clear(); saveData(); renderWishes(); showToast('Gespeichert!', 'success');
+}
+
+function renderWishList() {
+    const days = getDaysInMonth(data.currentYear, data.currentMonth);
+    let wishes = [];
+    for (let d = 1; d <= days; d++) { const dk = `${data.currentYear}-${data.currentMonth}-${d}`; for (const [emp, w] of Object.entries(data.wishes[dk] || {})) wishes.push({ d, emp, w, dk }); }
+    document.getElementById('wishList').innerHTML = wishes.length === 0 ? '<div style="text-align:center;color:var(--text-muted)">Keine Wünsche</div>' :
+        wishes.map(x => `<div class="rule-item"><div><div class="rule-name">${x.emp}</div><div class="rule-details">${x.d}. ${MONTHS[data.currentMonth-1]}: ${x.w}</div></div><button class="btn-icon danger" onclick="deleteWish('${x.dk}','${x.emp}')">✕</button></div>`).join('');
+}
+
+function deleteWish(dk, emp) { if (data.wishes[dk]) { delete data.wishes[dk][emp]; if (Object.keys(data.wishes[dk]).length === 0) delete data.wishes[dk]; } saveData(); renderWishes(); }
+
+// ========== RULES ==========
+function renderRules() {
+    const sel = document.getElementById('ruleEmp');
+    const cv = sel.value;
+    sel.innerHTML = data.employees.filter(e => e.percent > 0).map(e => `<option value="${e.name}">${e.name}</option>`).join('');
+    if (cv && data.employees.some(e => e.name === cv)) sel.value = cv;
+    document.getElementById('ruleWeekdays').innerHTML = DAYS.map((n, i) => `<button class="toggle-btn ${selectedRuleWeekdays.has(i) ? 'active' : ''}" onclick="toggleRuleWeekday(${i})">${n}</button>`).join('');
+    document.getElementById('ruleShifts').innerHTML = ['Frueh', 'Spaet', 'Nacht', 'FREI'].map(s => `<button class="toggle-btn ${selectedRuleShifts.has(s) ? 'active' : ''}" onclick="toggleRuleShift('${s}')">${s}</button>`).join('');
+    renderRuleList();
+}
+
+function toggleRuleWeekday(i) { selectedRuleWeekdays.has(i) ? selectedRuleWeekdays.delete(i) : selectedRuleWeekdays.add(i); renderRules(); }
+function toggleRuleShift(s) { selectedRuleShifts.has(s) ? selectedRuleShifts.delete(s) : selectedRuleShifts.add(s); renderRules(); }
+
+function addRule() {
+    if (selectedRuleWeekdays.size === 0 || selectedRuleShifts.size === 0) { showToast('Tage und Schichten wählen!', 'error'); return; }
+    data.permanentRules.push({ employee: document.getElementById('ruleEmp').value, weekdays: [...selectedRuleWeekdays], allowedShifts: [...selectedRuleShifts] });
+    selectedRuleWeekdays.clear(); selectedRuleShifts.clear(); saveData(); renderRules(); showToast('Regel hinzugefügt!', 'success');
+}
+
+function renderRuleList() {
+    document.getElementById('ruleList').innerHTML = data.permanentRules.length === 0 ? '<div style="text-align:center;color:var(--text-muted)">Keine Regeln</div>' :
+        data.permanentRules.map((r, i) => `<div class="rule-item"><div><div class="rule-name">${r.employee}</div><div class="rule-details">${r.weekdays.map(d => DAYS[d]).join(', ')}: ${r.allowedShifts.join(', ')}</div></div><button class="btn-icon danger" onclick="deleteRule(${i})">✕</button></div>`).join('');
+}
+
+function deleteRule(i) { data.permanentRules.splice(i, 1); saveData(); renderRules(); }
+
+// ==========================================
+// ========== JOVANS ALGORITHMUS ==========
+// ==========================================
+// REGELN:
+// 1. Saal-Nächte zuerst
+// 2. Wünsche (Urlaub, FREI, positive Schichtwünsche)
+// 3. Dauerregeln - wenn FREI dann AZV, KEINE SCHICHT!
+// 4. Nacht-Blöcke (2-3 Nächte, keine WE/Arbeitstag Überschreitung)
+// 5. Nach Nacht: N oder 2×AZV oder 1×AZV+S
+// 6. Tagschichten
+// 7. JEDER ARBEITSTAG OHNE SCHICHT = AZV!
+// 8. WE/Feiertag ohne Schicht = leer (OK)
+
+function generatePlan() {
+    showToast('Generiere...');
+    setTimeout(() => {
+        let best = null;
+        for (let i = 0; i < 150; i++) {
+            const r = simulate();
+            if (r && (!best || r.score < best.score)) best = r;
+        }
+        if (best) {
+            data.currentPlan = best.plan;
+            data.currentStats = best.stats;
+            saveData(); renderPlan();
+            showToast(`Fertig!`, 'success');
+        } else {
+            showToast('Fehler!', 'error');
+        }
+    }, 50);
+}
+
+function simulate() {
+    const days = getDaysInMonth(data.currentYear, data.currentMonth);
+    const holidays = getHolidays(data.currentYear);
+    const plan = {};
+    const stats = {};
+    const active = data.employees.filter(e => e.percent > 0);
+    if (active.length === 0) return null;
+    
+    // Init stats
+    for (const e of active) {
+        let target = 0;
+        for (let d = 1; d <= days; d++) {
+            const dk = `${data.currentYear}-${data.currentMonth}-${d}`;
+            const wish = data.wishes[dk]?.[e.name];
+            if (!isWEorHoliday(d, holidays) && wish !== 'Urlaub' && wish !== 'FREI') {
+                target += 8 * (e.percent / 100);
+            }
+        }
+        stats[e.name] = { target, actual: 0, early: 0, late: 0, night: 0, weekend: 0, azv: 0 };
+    }
+    
+    // Recovery tracking
+    const mustAZV = {}; // Tag 1 nach Nacht: MUSS AZV
+    const canSpaetOrAZV = {}; // Tag 2 nach Nacht: Spät ODER AZV
+    for (const e of active) {
+        mustAZV[e.name] = new Set();
+        canSpaetOrAZV[e.name] = new Set();
+    }
+    
+    // ========== PHASE 0: SAAL-NÄCHTE ==========
+    for (let d = 1; d <= days; d++) {
+        const dk = `${data.currentYear}-${data.currentMonth}-${d}`;
+        if (data.saalNights[dk]) {
+            const shift = isWEorHoliday(d, holidays) ? 'WE_Nacht' : 'Nacht';
+            plan[`${d}_${shift}`] = 'SAAL';
+        }
+    }
+    
+    // ========== PHASE 1: URLAUB & FREI WÜNSCHE -> AZV ==========
+    for (let d = 1; d <= days; d++) {
+        const dk = `${data.currentYear}-${data.currentMonth}-${d}`;
+        const isWE = isWEorHoliday(d, holidays);
+        
+        for (const e of active) {
+            const wish = data.wishes[dk]?.[e.name];
+            if (wish === 'Urlaub') {
+                plan[`${d}_Urlaub_${e.name}`] = true; // Markiere Urlaub
+            } else if (wish === 'FREI' && !isWE) {
+                plan[`${d}_AZV`] = (plan[`${d}_AZV`] || '') + (plan[`${d}_AZV`] ? ',' : '') + e.name;
+                stats[e.name].azv++;
+            }
+        }
+    }
+    
+    // ========== PHASE 2: DAUERREGELN - FREI = AZV! ==========
+    for (let d = 1; d <= days; d++) {
+        const isWE = isWEorHoliday(d, holidays);
+        if (isWE) continue; // WE ignorieren
+        
+        const wd = getWeekday(d);
+        
+        for (const e of active) {
+            const dk = `${data.currentYear}-${data.currentMonth}-${d}`;
+            const wish = data.wishes[dk]?.[e.name];
+            if (wish === 'Urlaub' || wish === 'FREI') continue; // Schon behandelt
+            
+            // Check Dauerregel
+            const rules = data.permanentRules.filter(r => r.employee === e.name && r.weekdays.includes(wd));
+            if (rules.length > 0) {
+                // Wenn NUR FREI erlaubt ist -> AZV!
+                const onlyFrei = rules.every(r => r.allowedShifts.length === 1 && r.allowedShifts[0] === 'FREI');
+                if (onlyFrei) {
+                    if (!plan[`${d}_AZV`]?.includes(e.name)) {
+                        plan[`${d}_AZV`] = (plan[`${d}_AZV`] || '') + (plan[`${d}_AZV`] ? ',' : '') + e.name;
+                        stats[e.name].azv++;
+                    }
+                }
+            }
+        }
+    }
+    
+    // ========== PHASE 3: POSITIVE SCHICHTWÜNSCHE ==========
+    for (let d = 1; d <= days; d++) {
+        const dk = `${data.currentYear}-${data.currentMonth}-${d}`;
+        const isWE = isWEorHoliday(d, holidays);
+        
+        for (const e of active) {
+            const wish = data.wishes[dk]?.[e.name];
+            if (!wish || wish === 'Urlaub' || wish === 'FREI' || wish.startsWith('KEIN')) continue;
+            if (hasAnyAssignment(plan, e.name, d)) continue;
+            
+            if (wish === 'Frueh' && !isWE && !plan[`${d}_Frueh`]) {
+                if (canWork(e.name, d, 'Frueh', plan, mustAZV, canSpaetOrAZV, holidays)) {
+                    assignShift(plan, stats, e.name, d, 'Frueh', holidays);
+                }
+            } else if (wish === 'Spaet' && !isWE && !plan[`${d}_Spaet`]) {
+                if (canWork(e.name, d, 'Spaet', plan, mustAZV, canSpaetOrAZV, holidays)) {
+                    assignShift(plan, stats, e.name, d, 'Spaet', holidays);
+                }
+            } else if (wish === 'Nacht') {
+                const shift = isWE ? 'WE_Nacht' : 'Nacht';
+                if (!plan[`${d}_${shift}`] && canWork(e.name, d, shift, plan, mustAZV, canSpaetOrAZV, holidays)) {
+                    assignShift(plan, stats, e.name, d, shift, holidays);
+                    markRecovery(e.name, d, days, mustAZV, canSpaetOrAZV);
+                }
+            }
+        }
+    }
+    
+    // ========== PHASE 4: NACHT-BLÖCKE ==========
+    const nightSeqs = buildNightSequences(days, holidays, plan);
+    
+    for (const seq of nightSeqs) {
+        let i = 0;
+        while (i < seq.days.length) {
+            const shift = seq.isWE ? 'WE_Nacht' : 'Nacht';
+            if (plan[`${seq.days[i]}_${shift}`]) { i++; continue; }
+            
+            const maxBlock = Math.min(3, seq.days.length - i);
+            let bestEmp = null, bestSize = 0, bestScore = Infinity;
+            
+            for (const e of active) {
+                if (stats[e.name].night >= 5) continue;
+                
+                let canDo = 0;
+                for (let j = 0; j < maxBlock && stats[e.name].night + canDo < 5; j++) {
+                    const d = seq.days[i + j];
+                    if (plan[`${d}_${shift}`]) break;
+                    if (!canWork(e.name, d, shift, plan, mustAZV, canSpaetOrAZV, holidays)) break;
+                    canDo++;
+                }
+                
+                if (canDo >= 2 || (canDo === 1 && !bestEmp)) {
+                    const needsMore = stats[e.name].night < 2;
+                    const score = (needsMore ? -1000 : 0) - canDo * 100 + stats[e.name].night * 50 + Math.random() * 10;
+                    if (canDo > bestSize || (canDo === bestSize && score < bestScore)) {
+                        bestEmp = e; bestSize = canDo; bestScore = score;
+                    }
+                }
+            }
+            
+            if (bestEmp && bestSize > 0) {
+                for (let j = 0; j < bestSize; j++) {
+                    assignShift(plan, stats, bestEmp.name, seq.days[i + j], shift, holidays);
+                }
+                markRecovery(bestEmp.name, seq.days[i + bestSize - 1], days, mustAZV, canSpaetOrAZV);
+                i += bestSize;
+            } else {
+                i++;
+            }
+        }
+    }
+    
+    // ========== PHASE 5: RECOVERY TAGE -> AZV ==========
+    for (const e of active) {
+        for (const d of mustAZV[e.name]) {
+            if (d <= days && !hasAnyAssignment(plan, e.name, d) && !isWEorHoliday(d, holidays)) {
+                addAZV(plan, stats, e.name, d);
+            }
+        }
+    }
+    
+    // ========== PHASE 6: TAGSCHICHTEN ==========
+    for (let d = 1; d <= days; d++) {
+        const isWE = isWEorHoliday(d, holidays);
+        const shifts = isWE ? ['WE_Tag'] : ['Frueh', 'Spaet'];
+        
+        for (const shift of shifts) {
+            if (plan[`${d}_${shift}`]) continue;
+            
+            let cands = active.filter(e => canWork(e.name, d, shift, plan, mustAZV, canSpaetOrAZV, holidays));
+            
+            // FA für Früh
+            if (shift === 'Frueh') {
+                const fas = cands.filter(e => e.role === 'FA');
+                if (fas.length > 0) cands = fas;
+            }
+            
+            if (cands.length === 0) continue;
+            
+            // Sortieren
+            cands.sort((a, b) => {
+                const sa = stats[a.name], sb = stats[b.name];
+                // Min 2 Spät
+                if (shift === 'Spaet') {
+                    const aNeed = sa.late < 2 ? 2 - sa.late : 0;
+                    const bNeed = sb.late < 2 ? 2 - sb.late : 0;
+                    if (aNeed !== bNeed) return bNeed - aNeed;
+                }
+                return (sa.actual / (sa.target || 1)) - (sb.actual / (sb.target || 1)) + (Math.random() - 0.5) * 0.1;
+            });
+            
+            assignShift(plan, stats, cands[0].name, d, shift, holidays);
+        }
+    }
+    
+    // ========== PHASE 7: RECOVERY TAG 2 -> Spät oder AZV ==========
+    for (const e of active) {
+        for (const d of canSpaetOrAZV[e.name]) {
+            if (d <= days && !hasAnyAssignment(plan, e.name, d) && !isWEorHoliday(d, holidays)) {
+                // Spät wenn nötig und frei, sonst AZV
+                if (stats[e.name].late < 2 && !plan[`${d}_Spaet`]) {
+                    assignShift(plan, stats, e.name, d, 'Spaet', holidays);
+                } else {
+                    addAZV(plan, stats, e.name, d);
+                }
+            }
+        }
+    }
+    
+    // ========== PHASE 8: ALLE ARBEITSTAGE OHNE ZUWEISUNG = AZV ==========
+    for (let d = 1; d <= days; d++) {
+        const isWE = isWEorHoliday(d, holidays);
+        if (isWE) continue; // WE darf leer sein
+        
+        for (const e of active) {
+            const dk = `${data.currentYear}-${data.currentMonth}-${d}`;
+            const wish = data.wishes[dk]?.[e.name];
+            
+            if (wish === 'Urlaub') continue; // Urlaub bleibt Urlaub
+            
+            if (!hasAnyAssignment(plan, e.name, d)) {
+                addAZV(plan, stats, e.name, d);
+            }
+        }
+    }
+    
+    // ========== SCORE ==========
+    let score = 0;
+    for (let d = 1; d <= days; d++) {
+        const isWE = isWEorHoliday(d, holidays);
+        const required = isWE ? ['WE_Tag', 'WE_Nacht'] : ['Frueh', 'Spaet', 'Nacht'];
+        for (const s of required) {
+            if (!plan[`${d}_${s}`]) score += 1000000;
+        }
+        if (!isWE && plan[`${d}_Frueh`]) {
+            const emp = data.employees.find(x => x.name === plan[`${d}_Frueh`]);
+            if (!emp || emp.role !== 'FA') score += 100000;
+        }
+    }
+    for (const e of active) {
+        const s = stats[e.name];
+        if (s.night < 2) score += (2 - s.night) * 500000;
+        if (s.night > 5) score += (s.night - 5) * 500000;
+        if (s.late < 2) score += (2 - s.late) * 300000;
+        score += Math.pow(s.actual - s.target, 2) * 10;
+    }
+    
+    return { plan, stats, score };
+}
+
+function hasAnyAssignment(plan, emp, d) {
+    for (const s of Object.keys(SHIFT_TYPES)) {
+        if (plan[`${d}_${s}`] === emp) return true;
+    }
+    if (plan[`${d}_AZV`]?.includes(emp)) return true;
+    if (plan[`${d}_Urlaub_${emp}`]) return true;
+    return false;
+}
+
+function canWork(emp, d, shift, plan, mustAZV, canSpaetOrAZV, holidays) {
+    const dk = `${data.currentYear}-${data.currentMonth}-${d}`;
+    const wish = data.wishes[dk]?.[emp] || '';
+    
+    // Urlaub oder FREI Wunsch = nicht arbeiten
+    if (wish === 'Urlaub' || wish === 'FREI') return false;
+    
+    // Negative Wünsche
+    if (wish.includes('KEIN_Frueh') && (shift === 'Frueh' || shift === 'WE_Tag')) return false;
+    if (wish.includes('KEIN_Spaet') && shift === 'Spaet') return false;
+    if (wish.includes('KEIN_Nacht') && (shift === 'Nacht' || shift === 'WE_Nacht')) return false;
+    if (wish.includes('KEIN_WE') && (shift === 'WE_Tag' || shift === 'WE_Nacht')) return false;
+    
+    // Dauerregeln
+    const wd = getWeekday(d);
+    const rules = data.permanentRules.filter(r => r.employee === emp && r.weekdays.includes(wd));
+    if (rules.length > 0) {
+        const typeMap = { 'F': 'Frueh', 'S': 'Spaet', 'N': 'Nacht' };
+        const shiftType = typeMap[SHIFT_TYPES[shift].type] || '';
+        // Wenn Regel existiert, muss Schicht erlaubt sein
+        if (!rules.some(r => r.allowedShifts.includes(shiftType))) {
+            return false;
+        }
+    }
+    
+    // Recovery Tag 1 = nur weitere Nacht erlaubt
+    if (mustAZV[emp]?.has(d)) {
+        if (shift !== 'Nacht' && shift !== 'WE_Nacht') return false;
+    }
+    
+    // Recovery Tag 2 = nur Spät erlaubt
+    if (canSpaetOrAZV[emp]?.has(d)) {
+        if (shift !== 'Spaet') return false;
+    }
+    
+    // Schon zugewiesen?
+    if (hasAnyAssignment(plan, emp, d)) return false;
+    
+    // Spät → Früh verboten
+    if (d > 1 && plan[`${d-1}_Spaet`] === emp && (shift === 'Frueh' || shift === 'WE_Tag')) {
+        return false;
+    }
+    
+    return true;
+}
+
+function markRecovery(emp, lastNightDay, totalDays, mustAZV, canSpaetOrAZV) {
+    if (lastNightDay + 1 <= totalDays) mustAZV[emp].add(lastNightDay + 1);
+    if (lastNightDay + 2 <= totalDays) canSpaetOrAZV[emp].add(lastNightDay + 2);
+}
+
+function assignShift(plan, stats, emp, d, shift, holidays) {
+    plan[`${d}_${shift}`] = emp;
+    const si = SHIFT_TYPES[shift];
+    stats[emp].actual += si.hours;
+    if (si.type === 'F') stats[emp].early++;
+    if (si.type === 'S') stats[emp].late++;
+    if (si.type === 'N') stats[emp].night++;
+    if (si.isWeekend || isWEorHoliday(d, holidays)) stats[emp].weekend++;
+}
+
+function addAZV(plan, stats, emp, d) {
+    if (plan[`${d}_AZV`]?.includes(emp)) return; // Schon AZV
+    plan[`${d}_AZV`] = (plan[`${d}_AZV`] || '') + (plan[`${d}_AZV`] ? ',' : '') + emp;
+    stats[emp].azv++;
+}
+
+function hasShift(plan, emp, d) {
+    for (const s of Object.keys(SHIFT_TYPES)) {
+        if (plan[`${d}_${s}`] === emp) return true;
+    }
+    return false;
+}
+
+function buildNightSequences(days, holidays, plan) {
+    const seqs = [];
+    let cur = null;
+    for (let d = 1; d <= days; d++) {
+        const isWE = isWEorHoliday(d, holidays);
+        const shift = isWE ? 'WE_Nacht' : 'Nacht';
+        
+        // Boundary: WE <-> Arbeitstag
+        if (cur && cur.isWE !== isWE) { seqs.push(cur); cur = null; }
+        
+        if (!cur) cur = { days: [d], isWE };
+        else cur.days.push(d);
+    }
+    if (cur) seqs.push(cur);
+    return seqs;
+}
+
+// ========== RENDER PLAN (Format wie Excel Template) ==========
+function renderPlan() {
+    if (!data.currentPlan) {
+        document.getElementById('planGrid').innerHTML = '<div style="text-align:center;padding:40px;color:var(--text-muted)">Noch kein Plan. Klicke "Generieren".</div>';
+        document.getElementById('statsGrid').innerHTML = '';
+        document.getElementById('statsTable').innerHTML = '';
+        return;
+    }
+    
+    const plan = data.currentPlan;
+    const stats = data.currentStats;
+    const days = getDaysInMonth(data.currentYear, data.currentMonth);
+    const holidays = getHolidays(data.currentYear);
+    const active = data.employees.filter(e => e.percent > 0);
+    
+    // Stats cards
+    let total = 0, filled = 0, faOk = 0, faTotal = 0;
+    for (let d = 1; d <= days; d++) {
+        const isWE = isWEorHoliday(d, holidays);
+        const required = isWE ? ['WE_Tag', 'WE_Nacht'] : ['Frueh', 'Spaet', 'Nacht'];
+        for (const s of required) { total++; if (plan[`${d}_${s}`]) filled++; }
+        if (!isWE) {
+            faTotal++;
+            const emp = data.employees.find(e => e.name === plan[`${d}_Frueh`]);
+            if (emp && emp.role === 'FA') faOk++;
+        }
+    }
+    
+    document.getElementById('statsGrid').innerHTML = `
+        <div class="stat-card ${filled === total ? 'success' : 'warning'}"><div class="stat-value">${filled}/${total}</div><div class="stat-label">Besetzt</div></div>
+        <div class="stat-card ${faOk === faTotal ? 'success' : 'danger'}"><div class="stat-value">${faOk}/${faTotal}</div><div class="stat-label">FA Früh</div></div>
+        <div class="stat-card"><div class="stat-value">${active.length}</div><div class="stat-label">Team</div></div>
+    `;
+    
+    // Plan table - MITARBEITER ALS ZEILEN (wie Excel Template)
+    let html = '<table class="plan-table"><thead><tr><th></th>';
+    
+    // Header: Day numbers + weekday names
+    for (let d = 1; d <= days; d++) {
+        const dt = new Date(data.currentYear, data.currentMonth - 1, d);
+        const iso = `${data.currentYear}-${String(data.currentMonth).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+        const isWE = dt.getDay() === 0 || dt.getDay() === 6;
+        const isHol = holidays.has(iso);
+        const dn = DAYS[dt.getDay() === 0 ? 6 : dt.getDay() - 1];
+        html += `<th class="day-header ${isHol ? 'holiday' : isWE ? 'weekend' : ''}">${d}<br><small>${dn}</small></th>`;
+    }
+    html += '</tr></thead><tbody>';
+    
+    // Employee rows
+    for (const emp of active) {
+        html += `<tr><td>${emp.name} (${emp.percent}%)</td>`;
+        
+        for (let d = 1; d <= days; d++) {
+            const dk = `${data.currentYear}-${data.currentMonth}-${d}`;
+            const wish = data.wishes[dk]?.[emp.name];
+            const isWE = isWEorHoliday(d, holidays);
+            
+            let code = '';
+            let cellClass = 'free';
+            let title = '';
+            
+            // Check wishes first
+            if (wish === 'Urlaub') {
+                code = 'U';
+                cellClass = 'urlaub';
+                title = 'Urlaub';
+            } else if (wish === 'FREI') {
+                code = 'AZV';
+                cellClass = 'azv';
+                title = 'Frei (AZV)';
+            } else if (plan[`${d}_AZV`]?.includes(emp.name)) {
+                code = 'AZV';
+                cellClass = 'azv';
+                title = 'AZV';
+            } else {
+                // Check plan
+                if (plan[`${d}_AZV`] === emp.name) {
+                    code = 'AZV';
+                    cellClass = 'azv';
+                    title = 'Arbeitszeitverkürzung';
+                } else if (isWE) {
+                    if (plan[`${d}_WE_Tag`] === emp.name) { code = 'F'; cellClass = 'weekend'; title = 'WE Tagdienst'; }
+                    else if (plan[`${d}_WE_Nacht`] === emp.name) { code = 'N'; cellClass = 'night'; title = 'WE Nachtdienst'; }
+                } else {
+                    if (plan[`${d}_Frueh`] === emp.name) { code = 'F'; cellClass = 'early'; title = 'Frühdienst'; }
+                    else if (plan[`${d}_Spaet`] === emp.name) { code = 'S'; cellClass = 'late'; title = 'Spätdienst'; }
+                    else if (plan[`${d}_Nacht`] === emp.name) { code = 'N'; cellClass = 'night'; title = 'Nachtdienst'; }
+                }
+            }
+            
+            html += `<td class="plan-cell ${cellClass}" onclick="openEditByEmp('${emp.name}',${d})" title="${title}">${code}</td>`;
+        }
+        html += '</tr>';
+    }
+    
+    // Saalanästhesist row
+    html += '<tr><td>Saalanästhesist</td>';
+    for (let d = 1; d <= days; d++) {
+        const dk = `${data.currentYear}-${data.currentMonth}-${d}`;
+        const isWE = isWEorHoliday(d, holidays);
+        const shift = isWE ? 'WE_Nacht' : 'Nacht';
+        
+        if (data.saalNights[dk] || plan[`${d}_${shift}`] === 'SAAL') {
+            html += `<td class="plan-cell saal" title="Saal-Nacht">N</td>`;
+        } else {
+            html += `<td class="plan-cell free">#</td>`;
+        }
+    }
+    html += '</tr>';
+    
+    // Empty row
+    html += '<tr><td colspan="' + (days + 1) + '"></td></tr>';
+    
+    // Counter rows
+    const counters = [
+        { code: 'F', label: 'FD', shifts: ['Frueh', 'WE_Tag'] },
+        { code: 'S', label: 'SD', shifts: ['Spaet'] },
+        { code: 'N', label: 'ND', shifts: ['Nacht', 'WE_Nacht'] }
+    ];
+    
+    for (const counter of counters) {
+        html += `<tr><td>${counter.label}</td>`;
+        for (let d = 1; d <= days; d++) {
+            let count = 0;
+            for (const shift of counter.shifts) {
+                const emp = plan[`${d}_${shift}`];
+                if (emp && emp !== 'SAAL') count++;
+            }
+            const color = count === 0 ? 'var(--danger)' : count >= 1 ? 'var(--success)' : '';
+            html += `<td style="font-weight:bold;color:${color}">${count || '-'}</td>`;
+        }
+        html += '</tr>';
+    }
+    
+    // Ferien row
+    html += '<tr><td>Ferien</td>';
+    for (let d = 1; d <= days; d++) {
+        const iso = `${data.currentYear}-${String(data.currentMonth).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+        const holidayName = holidays.get(iso);
+        html += `<td style="font-size:8px;color:var(--danger)">${holidayName ? holidayName.substring(0, 6) : ''}</td>`;
+    }
+    html += '</tr>';
+    
+    html += '</tbody></table>';
+    document.getElementById('planGrid').innerHTML = html;
+    
+    // Stats table
+    let st = '<table class="emp-stats-table"><thead><tr><th>Name</th><th>Rolle</th><th>F</th><th>S</th><th>N</th><th>WE</th><th>AZV</th><th>Std</th><th>Diff</th></tr></thead><tbody>';
+    for (const e of active) {
+        const s = stats[e.name] || { early: 0, late: 0, night: 0, weekend: 0, azv: 0, actual: 0, target: 1 };
+        const diff = Math.round(s.actual - s.target);
+        const diffColor = Math.abs(diff) > 8 ? 'var(--danger)' : Math.abs(diff) > 4 ? 'var(--warning)' : 'var(--success)';
+        st += `<tr>
+            <td><strong>${e.name}</strong></td>
+            <td>${e.role}</td>
+            <td style="color:${s.early < 2 ? 'var(--danger)' : 'inherit'}">${s.early}</td>
+            <td style="color:${s.late < 2 ? 'var(--danger)' : 'inherit'}">${s.late}</td>
+            <td style="color:${s.night < 2 ? 'var(--danger)' : 'inherit'}">${s.night}</td>
+            <td>${s.weekend}</td>
+            <td>${s.azv || 0}</td>
+            <td>${s.actual}h</td>
+            <td style="color:${diffColor}">${diff >= 0 ? '+' : ''}${diff}h</td>
+        </tr>`;
+    }
+    st += '</tbody></table>';
+    document.getElementById('statsTable').innerHTML = st;
+}
+
+// Edit by employee click
+function openEditByEmp(empName, d) {
+    const plan = data.currentPlan || {};
+    const isWE = isWEorHoliday(d, getHolidays(data.currentYear));
+    const dk = `${data.currentYear}-${data.currentMonth}-${d}`;
+    const wish = data.wishes[dk]?.[empName];
+    
+    document.getElementById('editTitle').textContent = `${empName} - Tag ${d}`;
+    
+    // Find current assignment
+    let currentShift = '';
+    if (plan[`${d}_AZV`] === empName) currentShift = 'AZV';
+    else if (isWE) {
+        if (plan[`${d}_WE_Tag`] === empName) currentShift = 'WE_Tag';
+        else if (plan[`${d}_WE_Nacht`] === empName) currentShift = 'WE_Nacht';
+    } else {
+        if (plan[`${d}_Frueh`] === empName) currentShift = 'Frueh';
+        else if (plan[`${d}_Spaet`] === empName) currentShift = 'Spaet';
+        else if (plan[`${d}_Nacht`] === empName) currentShift = 'Nacht';
+    }
+    
+    document.getElementById('editInfo').textContent = currentShift ? `Aktuell: ${currentShift}` : (wish || 'Keine Zuweisung');
+    
+    let html = '<div style="display:flex;flex-direction:column;gap:8px">';
+    
+    if (isWE) {
+        html += `<button class="btn ${currentShift === 'WE_Tag' ? 'btn-primary' : 'btn-secondary'}" onclick="assignToEmp('${empName}',${d},'WE_Tag')">🌅 Tagdienst (F)</button>`;
+        html += `<button class="btn ${currentShift === 'WE_Nacht' ? 'btn-primary' : 'btn-secondary'}" onclick="assignToEmp('${empName}',${d},'WE_Nacht')">🌙 Nachtdienst (N)</button>`;
+    } else {
+        html += `<button class="btn ${currentShift === 'Frueh' ? 'btn-primary' : 'btn-secondary'}" onclick="assignToEmp('${empName}',${d},'Frueh')">🌅 Frühdienst (F)</button>`;
+        html += `<button class="btn ${currentShift === 'Spaet' ? 'btn-primary' : 'btn-secondary'}" onclick="assignToEmp('${empName}',${d},'Spaet')">🌆 Spätdienst (S)</button>`;
+        html += `<button class="btn ${currentShift === 'Nacht' ? 'btn-primary' : 'btn-secondary'}" onclick="assignToEmp('${empName}',${d},'Nacht')">🌙 Nachtdienst (N)</button>`;
+    }
+    
+    html += `<button class="btn ${currentShift === 'AZV' ? 'btn-primary' : 'btn-secondary'}" onclick="assignToEmp('${empName}',${d},'AZV')">📅 AZV (Ausgleich)</button>`;
+    html += `<button class="btn btn-danger" onclick="assignToEmp('${empName}',${d},'')">❌ Entfernen</button>`;
+    html += '</div>';
+    
+    document.getElementById('editOptions').innerHTML = html;
+    openModal('editModal');
+}
+
+function assignToEmp(empName, d, shift) {
+    if (!data.currentPlan) data.currentPlan = {};
+    
+    const isWE = isWEorHoliday(d, getHolidays(data.currentYear));
+    
+    // Remove from all shifts first
+    const allShifts = isWE ? ['WE_Tag', 'WE_Nacht', 'AZV'] : ['Frueh', 'Spaet', 'Nacht', 'AZV'];
+    for (const s of allShifts) {
+        if (data.currentPlan[`${d}_${s}`] === empName) {
+            delete data.currentPlan[`${d}_${s}`];
+        }
+    }
+    
+    // Assign new shift
+    if (shift) {
+        data.currentPlan[`${d}_${shift}`] = empName;
+    }
+    
+    recalcStats();
+    saveData();
+    closeModal('editModal');
+    renderPlan();
+    showToast('Geändert!', 'success');
+}
+
+function recalcStats() {
+    if (!data.currentPlan) return;
+    const days = getDaysInMonth(data.currentYear, data.currentMonth);
+    const holidays = getHolidays(data.currentYear);
+    const stats = {};
+    
+    for (const e of data.employees) {
+        let target = 0;
+        if (e.percent > 0) {
+            for (let d = 1; d <= days; d++) {
+                const dk = `${data.currentYear}-${data.currentMonth}-${d}`;
+                const wish = data.wishes[dk]?.[e.name];
+                if (!isWEorHoliday(d, holidays) && wish !== 'Urlaub' && wish !== 'FREI') {
+                    target += 8 * (e.percent / 100);
+                }
+            }
+        }
+        stats[e.name] = { target, actual: 0, early: 0, late: 0, night: 0, weekend: 0, azv: 0 };
+    }
+    
+    for (let d = 1; d <= days; d++) {
+        const isWE = isWEorHoliday(d, holidays);
+        for (const [sid, si] of Object.entries(SHIFT_TYPES)) {
+            const emp = data.currentPlan[`${d}_${sid}`];
+            if (emp && emp !== 'SAAL' && stats[emp]) {
+                stats[emp].actual += si.hours;
+                if (si.isWeekend || isWE) stats[emp].weekend++;
+                if (si.type === 'F') stats[emp].early++;
+                if (si.type === 'S') stats[emp].late++;
+                if (si.type === 'N') stats[emp].night++;
+            }
+        }
+        // AZV
+        const azvEmp = data.currentPlan[`${d}_AZV`];
+        if (azvEmp && stats[azvEmp]) {
+            stats[azvEmp].azv++;
+            stats[azvEmp].actual -= 8;
+        }
+    }
+    data.currentStats = stats;
+}
+
+// ========== EXCEL EXPORT (wie IMC Template) ==========
+function exportCSV() {
+    if (!data.currentPlan) { showToast('Kein Plan!', 'error'); return; }
+    
+    const days = getDaysInMonth(data.currentYear, data.currentMonth);
+    const holidays = getHolidays(data.currentYear);
+    const active = data.employees.filter(e => e.percent > 0);
+    const stats = data.currentStats || {};
+    
+    // Build data array for Excel
+    const wsData = [];
+    
+    // Row 1: Empty + Day numbers
+    const headerRow = [''];
+    for (let d = 1; d <= days; d++) headerRow.push(d);
+    wsData.push(headerRow);
+    
+    // Row 2: Empty + Weekday names
+    const weekdayRow = [''];
+    for (let d = 1; d <= days; d++) {
+        const dt = new Date(data.currentYear, data.currentMonth - 1, d);
+        weekdayRow.push(DAYS[dt.getDay() === 0 ? 6 : dt.getDay() - 1]);
+    }
+    wsData.push(weekdayRow);
+    
+    // Employee rows
+    for (const emp of active) {
+        const row = [`${emp.name} (${emp.percent}%)`];
+        
+        for (let d = 1; d <= days; d++) {
+            const dk = `${data.currentYear}-${data.currentMonth}-${d}`;
+            const wish = data.wishes[dk]?.[emp.name];
+            const isWE = isWEorHoliday(d, holidays);
+            
+            // Check what shift this person has
+            let code = '';
+            
+            // Check wishes first
+            if (wish === 'Urlaub') {
+                code = 'U';
+            } else if (wish === 'FREI') {
+                code = 'Frei';
+            } else {
+                // Check plan
+                if (data.currentPlan[`${d}_AZV`] === emp.name) {
+                    code = 'AZV';
+                } else if (isWE) {
+                    if (data.currentPlan[`${d}_WE_Tag`] === emp.name) code = 'F';
+                    else if (data.currentPlan[`${d}_WE_Nacht`] === emp.name) code = 'N';
+                } else {
+                    if (data.currentPlan[`${d}_Frueh`] === emp.name) code = 'F';
+                    else if (data.currentPlan[`${d}_Spaet`] === emp.name) code = 'S';
+                    else if (data.currentPlan[`${d}_Nacht`] === emp.name) code = 'N';
+                }
+            }
+            
+            row.push(code);
+        }
+        wsData.push(row);
+    }
+    
+    // Saalanästhesist row
+    const saalRow = ['Saalanästhesist'];
+    for (let d = 1; d <= days; d++) {
+        const dk = `${data.currentYear}-${data.currentMonth}-${d}`;
+        const isWE = isWEorHoliday(d, holidays);
+        const shift = isWE ? 'WE_Nacht' : 'Nacht';
+        
+        if (data.saalNights[dk] || data.currentPlan[`${d}_${shift}`] === 'SAAL') {
+            saalRow.push('N');
+        } else {
+            saalRow.push('#');
+        }
+    }
+    wsData.push(saalRow);
+    
+    // Empty row
+    wsData.push(['']);
+    
+    // Counter rows: F, S, N
+    const counters = [
+        { code: 'F', label: 'FD' },
+        { code: 'S', label: 'SD' },
+        { code: 'N', label: 'ND' }
+    ];
+    
+    for (const counter of counters) {
+        const row = [counter.label];
+        for (let d = 1; d <= days; d++) {
+            let count = 0;
+            const isWE = isWEorHoliday(d, holidays);
+            
+            for (const emp of active) {
+                if (isWE) {
+                    if (counter.code === 'F' && data.currentPlan[`${d}_WE_Tag`] === emp.name) count++;
+                    if (counter.code === 'N' && data.currentPlan[`${d}_WE_Nacht`] === emp.name) count++;
+                } else {
+                    if (counter.code === 'F' && data.currentPlan[`${d}_Frueh`] === emp.name) count++;
+                    if (counter.code === 'S' && data.currentPlan[`${d}_Spaet`] === emp.name) count++;
+                    if (counter.code === 'N' && data.currentPlan[`${d}_Nacht`] === emp.name) count++;
+                }
+            }
+            row.push(count || '');
+        }
+        wsData.push(row);
+    }
+    
+    // Ferien row
+    const ferienRow = ['Ferien'];
+    for (let d = 1; d <= days; d++) {
+        const iso = `${data.currentYear}-${String(data.currentMonth).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+        const holidayName = holidays.get(iso);
+        ferienRow.push(holidayName ? holidayName.substring(0, 8) : '');
+    }
+    wsData.push(ferienRow);
+    
+    // Convert to CSV (semicolon separated for German Excel)
+    let csv = wsData.map(row => row.join(';')).join('\n');
+    
+    // Add statistics at bottom
+    csv += '\n\n;STATISTIK\n';
+    csv += ';Name;Rolle;F;S;N;WE;AZV;Std;Ziel;Diff\n';
+    for (const e of active) {
+        const s = stats[e.name] || { early: 0, late: 0, night: 0, weekend: 0, azv: 0, actual: 0, target: 0 };
+        const diff = Math.round(s.actual - s.target);
+        csv += `;${e.name};${e.role};${s.early};${s.late};${s.night};${s.weekend};${s.azv || 0};${s.actual};${Math.round(s.target)};${diff >= 0 ? '+' : ''}${diff}\n`;
+    }
+    
+    const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `Dienstplan_${MONTHS[data.currentMonth-1]}_${data.currentYear}.csv`;
+    a.click();
+    showToast('CSV exportiert! (Öffne mit Excel)', 'success');
+}
+
+function renderAll() { renderEmployees(); renderPlan(); }
+document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>
