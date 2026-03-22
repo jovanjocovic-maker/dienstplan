@@ -8,6 +8,7 @@
     <meta name="theme-color" content="#1e3a5f">
     <title>Jovans Dienstplaner</title>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+    <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
     <style>
         :root {
             --primary: #1e3a5f;
@@ -171,7 +172,7 @@
                 <button onclick="changeMonth(1)">▶</button>
             </div>
             <button class="action-btn btn-generate" onclick="generatePlan()">🎲 Generieren</button>
-            <button class="action-btn btn-export" onclick="exportCSV()">📊 CSV</button>
+            <button class="action-btn btn-export" onclick="exportExcel()">📊 Excel</button>
         </div>
     </header>
 
@@ -183,7 +184,6 @@
     </nav>
 
     <main>
-        <!-- PLAN PAGE -->
         <div id="page-plan" class="page active">
             <div id="statsGrid" class="stats-grid"></div>
             <div class="card">
@@ -196,8 +196,17 @@
             </div>
         </div>
 
-        <!-- EMPLOYEES PAGE -->
         <div id="page-employees" class="page">
+            <div class="card">
+                <div class="card-title">💾 Backup & Podešavanja (iOS/iPad)</div>
+                <div class="info-box">Spasi svoje kolege i konfiguraciju u fajl. Odlično za prenos na drugi uređaj.</div>
+                <div class="btn-grid" style="display:flex; gap:10px;">
+                    <button class="btn btn-secondary" style="flex:1;" onclick="exportBackup()">📥 Skini Backup</button>
+                    <input type="file" id="importFile" style="display:none" accept=".json" onchange="importBackup(event)">
+                    <button class="btn btn-secondary" style="flex:1;" onclick="document.getElementById('importFile').click()">📤 Učitaj Backup</button>
+                </div>
+            </div>
+
             <div class="card">
                 <div class="card-title">➕ Neuer Mitarbeiter</div>
                 <div class="form-row">
@@ -214,9 +223,7 @@
             </div>
         </div>
 
-        <!-- WISHES PAGE -->
         <div id="page-wishes" class="page">
-            <!-- Saal-Nächte -->
             <div class="card">
                 <div class="card-title">🏥 Saalanästhesist Nachtdienste</div>
                 <div class="info-box">Klicke auf Tage wo der Saalanästhesist Nachtdienst hat</div>
@@ -224,7 +231,6 @@
                 <button class="btn btn-primary" style="margin-top:12px" onclick="saveSaalNights()">💾 Saal-Nächte speichern</button>
             </div>
             
-            <!-- Wünsche -->
             <div class="card">
                 <div class="card-title">📝 Wunsch eintragen</div>
                 <div class="form-row">
@@ -260,7 +266,6 @@
             </div>
         </div>
 
-        <!-- RULES PAGE -->
         <div id="page-rules" class="page">
             <div class="card">
                 <div class="card-title">⚙️ Neue Dauerregel</div>
@@ -336,8 +341,39 @@ let selectedSaalDays = new Set();
 let selectedRuleWeekdays = new Set();
 let selectedRuleShifts = new Set();
 
-// ========== FEIERTAGE (alle Jahre) ==========
-function getHolidays(year) {
+// ========== BACKUP / RESTORE ==========
+function exportBackup() {
+    const dataStr = JSON.stringify(data);
+    const blob = new Blob([dataStr], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Dienstplan_Backup_${data.currentYear}.json`;
+    a.click();
+    showToast('Backup preuzet!', 'success');
+}
+
+function importBackup(e) {
+    const file = e.target.files[0];
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            const imported = JSON.parse(e.target.result);
+            data = {...data, ...imported};
+            saveData();
+            renderAll();
+            showToast('Backup uspešno učitan!', 'success');
+        } catch(err) {
+            showToast('Greška pri učitavanju!', 'error');
+        }
+    };
+    reader.readAsText(file);
+    e.target.value = ''; // Reset input
+}
+
+// ========== FEIERTAGE (Obuhvata celu godinu + prelaze) ==========
+function getHolidaysForYear(year) {
     const h = new Map();
     const fmt = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
     const add = (d, n) => { const r = new Date(d); r.setDate(r.getDate() + n); return r; };
@@ -375,6 +411,20 @@ function getHolidays(year) {
     return h;
 }
 
+function getHolidays(year) {
+    const holidays = new Map();
+    // Spajamo prethodnu, trenutnu i sledeću godinu zbog sigurnog prelaza decembar/januar
+    const hPrev = getHolidaysForYear(year - 1);
+    const hCurr = getHolidaysForYear(year);
+    const hNext = getHolidaysForYear(year + 1);
+    
+    for (const [k, v] of hPrev) holidays.set(k, v);
+    for (const [k, v] of hCurr) holidays.set(k, v);
+    for (const [k, v] of hNext) holidays.set(k, v);
+    
+    return holidays;
+}
+
 function getDaysInMonth(y, m) { return new Date(y, m, 0).getDate(); }
 function isWEorHoliday(d, holidays) {
     const dt = new Date(data.currentYear, data.currentMonth - 1, d);
@@ -389,7 +439,12 @@ function getWeekday(d) {
 // ========== INIT ==========
 function init() {
     const saved = localStorage.getItem('dienstplaner_v15');
-    if (saved) data = { ...data, ...JSON.parse(saved) };
+    if (saved) {
+        const parsed = JSON.parse(saved);
+        // Osigurava da učita sve ljude umesto defaulta
+        if(parsed.employees) data.employees = parsed.employees; 
+        data = { ...data, ...parsed };
+    }
     updateMonthLabel();
     renderAll();
 }
@@ -582,15 +637,6 @@ function deleteRule(i) { data.permanentRules.splice(i, 1); saveData(); renderRul
 // ==========================================
 // ========== JOVANS ALGORITHMUS ==========
 // ==========================================
-// REGELN:
-// 1. Saal-Nächte zuerst
-// 2. Wünsche (Urlaub, FREI, positive Schichtwünsche)
-// 3. Dauerregeln - wenn FREI dann AZV, KEINE SCHICHT!
-// 4. Nacht-Blöcke (2-3 Nächte, keine WE/Arbeitstag Überschreitung)
-// 5. Nach Nacht: N oder 2×AZV oder 1×AZV+S
-// 6. Tagschichten
-// 7. JEDER ARBEITSTAG OHNE SCHICHT = AZV!
-// 8. WE/Feiertag ohne Schicht = leer (OK)
 
 function generatePlan() {
     showToast('Generiere...');
@@ -632,7 +678,6 @@ function simulate() {
         stats[e.name] = { target, actual: 0, early: 0, late: 0, night: 0, weekend: 0, azv: 0 };
     }
     
-    // Recovery tracking
     const mustAZV = {};
     const canSpaetOrAZV = {};
     for (const e of active) {
@@ -659,24 +704,23 @@ function simulate() {
             if (wish === 'Urlaub') {
                 plan[`${d}_Urlaub_${e.name}`] = true;
             } else if (wish === 'FREI' && !isWE) {
-                plan[`${d}_AZV_${e.name}`] = true; // AZV pro Person!
+                plan[`${d}_AZV_${e.name}`] = true;
                 stats[e.name].azv++;
             }
         }
     }
     
-    // ========== PHASE 2: DAUERREGELN - FREI = AZV! ==========
+    // ========== PHASE 2: DAUERREGELN ==========
     for (let d = 1; d <= days; d++) {
         const isWE = isWEorHoliday(d, holidays);
         if (isWE) continue;
         
         const wd = getWeekday(d);
-        
         for (const e of active) {
             const dk = `${data.currentYear}-${data.currentMonth}-${d}`;
             const wish = data.wishes[dk]?.[e.name];
             if (wish === 'Urlaub' || wish === 'FREI') continue;
-            if (plan[`${d}_AZV_${e.name}`]) continue; // Schon AZV
+            if (plan[`${d}_AZV_${e.name}`]) continue;
             
             const rules = data.permanentRules.filter(r => r.employee === e.name && r.weekdays.includes(wd));
             if (rules.length > 0) {
@@ -689,7 +733,7 @@ function simulate() {
         }
     }
     
-    // ========== PHASE 3: POSITIVE SCHICHTWÜNSCHE ==========
+    // ========== PHASE 3: WÜNSCHE ZA SMENE ==========
     for (let d = 1; d <= days; d++) {
         const dk = `${data.currentYear}-${data.currentMonth}-${d}`;
         const isWE = isWEorHoliday(d, holidays);
@@ -700,13 +744,9 @@ function simulate() {
             if (hasAnyAssignment(plan, e.name, d)) continue;
             
             if (wish === 'Frueh' && !isWE && !plan[`${d}_Frueh`]) {
-                if (canWork(e.name, d, 'Frueh', plan, mustAZV, canSpaetOrAZV, holidays)) {
-                    assignShift(plan, stats, e.name, d, 'Frueh', holidays);
-                }
+                if (canWork(e.name, d, 'Frueh', plan, mustAZV, canSpaetOrAZV, holidays)) assignShift(plan, stats, e.name, d, 'Frueh', holidays);
             } else if (wish === 'Spaet' && !isWE && !plan[`${d}_Spaet`]) {
-                if (canWork(e.name, d, 'Spaet', plan, mustAZV, canSpaetOrAZV, holidays)) {
-                    assignShift(plan, stats, e.name, d, 'Spaet', holidays);
-                }
+                if (canWork(e.name, d, 'Spaet', plan, mustAZV, canSpaetOrAZV, holidays)) assignShift(plan, stats, e.name, d, 'Spaet', holidays);
             } else if (wish === 'Nacht') {
                 const shift = isWE ? 'WE_Nacht' : 'Nacht';
                 if (!plan[`${d}_${shift}`] && canWork(e.name, d, shift, plan, mustAZV, canSpaetOrAZV, holidays)) {
@@ -719,7 +759,6 @@ function simulate() {
     
     // ========== PHASE 4: NACHT-BLÖCKE ==========
     const nightSeqs = buildNightSequences(days, holidays, plan);
-    
     for (const seq of nightSeqs) {
         let i = 0;
         while (i < seq.days.length) {
@@ -750,14 +789,10 @@ function simulate() {
             }
             
             if (bestEmp && bestSize > 0) {
-                for (let j = 0; j < bestSize; j++) {
-                    assignShift(plan, stats, bestEmp.name, seq.days[i + j], shift, holidays);
-                }
+                for (let j = 0; j < bestSize; j++) assignShift(plan, stats, bestEmp.name, seq.days[i + j], shift, holidays);
                 markRecovery(bestEmp.name, seq.days[i + bestSize - 1], days, mustAZV, canSpaetOrAZV);
                 i += bestSize;
-            } else {
-                i++;
-            }
+            } else { i++; }
         }
     }
     
@@ -778,14 +813,12 @@ function simulate() {
         
         for (const shift of shifts) {
             if (plan[`${d}_${shift}`]) continue;
-            
             let cands = active.filter(e => canWork(e.name, d, shift, plan, mustAZV, canSpaetOrAZV, holidays));
             
             if (shift === 'Frueh') {
                 const fas = cands.filter(e => e.role === 'FA');
                 if (fas.length > 0) cands = fas;
             }
-            
             if (cands.length === 0) continue;
             
             cands.sort((a, b) => {
@@ -797,7 +830,6 @@ function simulate() {
                 }
                 return (sa.actual / (sa.target || 1)) - (sb.actual / (sb.target || 1)) + (Math.random() - 0.5) * 0.1;
             });
-            
             assignShift(plan, stats, cands[0].name, d, shift, holidays);
         }
     }
@@ -820,12 +852,10 @@ function simulate() {
     for (let d = 1; d <= days; d++) {
         const isWE = isWEorHoliday(d, holidays);
         if (isWE) continue;
-        
         for (const e of active) {
             const dk = `${data.currentYear}-${data.currentMonth}-${d}`;
             const wish = data.wishes[dk]?.[e.name];
             if (wish === 'Urlaub') continue;
-            
             if (!hasAnyAssignment(plan, e.name, d)) {
                 plan[`${d}_AZV_${e.name}`] = true;
                 stats[e.name].azv++;
@@ -833,38 +863,47 @@ function simulate() {
         }
     }
     
-    // ========== SCORE ==========
+    // ========== SCORE & OPTIMIERUNG (Zig-Zag Prevention) ==========
     let score = 0;
     for (let d = 1; d <= days; d++) {
         const isWE = isWEorHoliday(d, holidays);
         const required = isWE ? ['WE_Tag', 'WE_Nacht'] : ['Frueh', 'Spaet', 'Nacht'];
-        for (const s of required) {
-            if (!plan[`${d}_${s}`]) score += 1000000;
-        }
+        for (const s of required) { if (!plan[`${d}_${s}`]) score += 1000000; }
         if (!isWE && plan[`${d}_Frueh`]) {
             const emp = data.employees.find(x => x.name === plan[`${d}_Frueh`]);
             if (!emp || emp.role !== 'FA') score += 100000;
         }
     }
+    
+    // Anti Cik-Cak mehanizam
     for (const e of active) {
         const s = stats[e.name];
         if (s.night < 2) score += (2 - s.night) * 500000;
         if (s.night > 5) score += (s.night - 5) * 500000;
         if (s.late < 2) score += (2 - s.late) * 300000;
         score += Math.pow(s.actual - s.target, 2) * 10;
+        
+        // Penal za svaku promenu tipa smene (Frueh <-> Spaet)
+        let lastShiftType = null;
+        let shiftChanges = 0;
+        for (let d = 1; d <= days; d++) {
+            let currentType = null;
+            if (plan[`${d}_Frueh`] === e.name || plan[`${d}_WE_Tag`] === e.name) currentType = 'F';
+            else if (plan[`${d}_Spaet`] === e.name) currentType = 'S';
+            else if (plan[`${d}_Nacht`] === e.name || plan[`${d}_WE_Nacht`] === e.name) currentType = 'N';
+            
+            if (currentType && lastShiftType && currentType !== lastShiftType) shiftChanges++;
+            if (currentType) lastShiftType = currentType;
+        }
+        score += shiftChanges * 25000; // Ogroman penal za skakanje sa smene na smenu
     }
     
     return { plan, stats, score };
 }
 
 function hasAnyAssignment(plan, emp, d) {
-    // Schichten
-    for (const s of Object.keys(SHIFT_TYPES)) {
-        if (plan[`${d}_${s}`] === emp) return true;
-    }
-    // AZV (pro Person gespeichert)
+    for (const s of Object.keys(SHIFT_TYPES)) { if (plan[`${d}_${s}`] === emp) return true; }
     if (plan[`${d}_AZV_${emp}`]) return true;
-    // Urlaub
     if (plan[`${d}_Urlaub_${emp}`]) return true;
     return false;
 }
@@ -874,7 +913,6 @@ function canWork(emp, d, shift, plan, mustAZV, canSpaetOrAZV, holidays) {
     const wish = data.wishes[dk]?.[emp] || '';
     
     if (wish === 'Urlaub' || wish === 'FREI') return false;
-    
     if (wish.includes('KEIN_Frueh') && (shift === 'Frueh' || shift === 'WE_Tag')) return false;
     if (wish.includes('KEIN_Spaet') && shift === 'Spaet') return false;
     if (wish.includes('KEIN_Nacht') && (shift === 'Nacht' || shift === 'WE_Nacht')) return false;
@@ -885,24 +923,13 @@ function canWork(emp, d, shift, plan, mustAZV, canSpaetOrAZV, holidays) {
     if (rules.length > 0) {
         const typeMap = { 'F': 'Frueh', 'S': 'Spaet', 'N': 'Nacht' };
         const shiftType = typeMap[SHIFT_TYPES[shift].type] || '';
-        if (!rules.some(r => r.allowedShifts.includes(shiftType))) {
-            return false;
-        }
+        if (!rules.some(r => r.allowedShifts.includes(shiftType))) return false;
     }
     
-    if (mustAZV[emp]?.has(d)) {
-        if (shift !== 'Nacht' && shift !== 'WE_Nacht') return false;
-    }
-    
-    if (canSpaetOrAZV[emp]?.has(d)) {
-        if (shift !== 'Spaet') return false;
-    }
-    
+    if (mustAZV[emp]?.has(d) && shift !== 'Nacht' && shift !== 'WE_Nacht') return false;
+    if (canSpaetOrAZV[emp]?.has(d) && shift !== 'Spaet') return false;
     if (hasAnyAssignment(plan, emp, d)) return false;
-    
-    if (d > 1 && plan[`${d-1}_Spaet`] === emp && (shift === 'Frueh' || shift === 'WE_Tag')) {
-        return false;
-    }
+    if (d > 1 && plan[`${d-1}_Spaet`] === emp && (shift === 'Frueh' || shift === 'WE_Tag')) return false;
     
     return true;
 }
@@ -927,11 +954,7 @@ function buildNightSequences(days, holidays, plan) {
     let cur = null;
     for (let d = 1; d <= days; d++) {
         const isWE = isWEorHoliday(d, holidays);
-        const shift = isWE ? 'WE_Nacht' : 'Nacht';
-        
-        // Boundary: WE <-> Arbeitstag
         if (cur && cur.isWE !== isWE) { seqs.push(cur); cur = null; }
-        
         if (!cur) cur = { days: [d], isWE };
         else cur.days.push(d);
     }
@@ -939,7 +962,7 @@ function buildNightSequences(days, holidays, plan) {
     return seqs;
 }
 
-// ========== RENDER PLAN (Format wie Excel Template) ==========
+// ========== RENDER PLAN ==========
 function renderPlan() {
     if (!data.currentPlan) {
         document.getElementById('planGrid').innerHTML = '<div style="text-align:center;padding:40px;color:var(--text-muted)">Noch kein Plan. Klicke "Generieren".</div>';
@@ -954,7 +977,6 @@ function renderPlan() {
     const holidays = getHolidays(data.currentYear);
     const active = data.employees.filter(e => e.percent > 0);
     
-    // Stats cards
     let total = 0, filled = 0, faOk = 0, faTotal = 0;
     for (let d = 1; d <= days; d++) {
         const isWE = isWEorHoliday(d, holidays);
@@ -973,10 +995,7 @@ function renderPlan() {
         <div class="stat-card"><div class="stat-value">${active.length}</div><div class="stat-label">Team</div></div>
     `;
     
-    // Plan table - MITARBEITER ALS ZEILEN (wie Excel Template)
     let html = '<table class="plan-table"><thead><tr><th></th>';
-    
-    // Header: Day numbers + weekday names
     for (let d = 1; d <= days; d++) {
         const dt = new Date(data.currentYear, data.currentMonth - 1, d);
         const iso = `${data.currentYear}-${String(data.currentMonth).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
@@ -987,30 +1006,17 @@ function renderPlan() {
     }
     html += '</tr></thead><tbody>';
     
-    // Employee rows
     for (const emp of active) {
         html += `<tr><td>${emp.name} (${emp.percent}%)</td>`;
-        
         for (let d = 1; d <= days; d++) {
             const dk = `${data.currentYear}-${data.currentMonth}-${d}`;
             const wish = data.wishes[dk]?.[emp.name];
             const isWE = isWEorHoliday(d, holidays);
             
-            let code = '';
-            let cellClass = 'free';
-            let title = '';
-            
-            // Check wishes first
-            if (wish === 'Urlaub') {
-                code = 'U';
-                cellClass = 'urlaub';
-                title = 'Urlaub';
-            } else if (plan[`${d}_AZV_${emp.name}`]) {
-                code = 'AZV';
-                cellClass = 'azv';
-                title = 'AZV';
-            } else {
-                // Check plan shifts
+            let code = '', cellClass = 'free', title = '';
+            if (wish === 'Urlaub') { code = 'U'; cellClass = 'urlaub'; title = 'Urlaub'; }
+            else if (plan[`${d}_AZV_${emp.name}`]) { code = 'AZV'; cellClass = 'azv'; title = 'AZV'; }
+            else {
                 if (isWE) {
                     if (plan[`${d}_WE_Tag`] === emp.name) { code = 'F'; cellClass = 'weekend'; title = 'WE Tagdienst'; }
                     else if (plan[`${d}_WE_Nacht`] === emp.name) { code = 'N'; cellClass = 'night'; title = 'WE Nachtdienst'; }
@@ -1020,7 +1026,6 @@ function renderPlan() {
                     else if (plan[`${d}_Nacht`] === emp.name) { code = 'N'; cellClass = 'night'; title = 'Nachtdienst'; }
                 }
             }
-            
             html += `<td class="plan-cell ${cellClass}" onclick="openEditByEmp('${emp.name}',${d})" title="${title}">${code}</td>`;
         }
         html += '</tr>';
@@ -1032,74 +1037,50 @@ function renderPlan() {
         const dk = `${data.currentYear}-${data.currentMonth}-${d}`;
         const isWE = isWEorHoliday(d, holidays);
         const shift = isWE ? 'WE_Nacht' : 'Nacht';
-        
-        if (data.saalNights[dk] || plan[`${d}_${shift}`] === 'SAAL') {
-            html += `<td class="plan-cell saal" title="Saal-Nacht">N</td>`;
-        } else {
-            html += `<td class="plan-cell free">#</td>`;
-        }
+        if (data.saalNights[dk] || plan[`${d}_${shift}`] === 'SAAL') html += `<td class="plan-cell saal" title="Saal-Nacht">N</td>`;
+        else html += `<td class="plan-cell free">#</td>`;
     }
-    html += '</tr>';
+    html += '</tr><tr><td colspan="' + (days + 1) + '"></td></tr>';
     
-    // Empty row
-    html += '<tr><td colspan="' + (days + 1) + '"></td></tr>';
-    
-    // Counter rows
     const counters = [
         { code: 'F', label: 'FD', shifts: ['Frueh', 'WE_Tag'] },
         { code: 'S', label: 'SD', shifts: ['Spaet'] },
         { code: 'N', label: 'ND', shifts: ['Nacht', 'WE_Nacht'] }
     ];
-    
     for (const counter of counters) {
         html += `<tr><td>${counter.label}</td>`;
         for (let d = 1; d <= days; d++) {
             let count = 0;
-            for (const shift of counter.shifts) {
-                const emp = plan[`${d}_${shift}`];
-                if (emp && emp !== 'SAAL') count++;
-            }
-            const color = count === 0 ? 'var(--danger)' : count >= 1 ? 'var(--success)' : '';
-            html += `<td style="font-weight:bold;color:${color}">${count || '-'}</td>`;
+            for (const shift of counter.shifts) { const emp = plan[`${d}_${shift}`]; if (emp && emp !== 'SAAL') count++; }
+            html += `<td style="font-weight:bold;color:${count === 0 ? 'var(--danger)' : count >= 1 ? 'var(--success)' : ''}">${count || '-'}</td>`;
         }
         html += '</tr>';
     }
     
-    // Ferien row
     html += '<tr><td>Ferien</td>';
     for (let d = 1; d <= days; d++) {
         const iso = `${data.currentYear}-${String(data.currentMonth).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
         const holidayName = holidays.get(iso);
         html += `<td style="font-size:8px;color:var(--danger)">${holidayName ? holidayName.substring(0, 6) : ''}</td>`;
     }
-    html += '</tr>';
-    
-    html += '</tbody></table>';
+    html += '</tr></tbody></table>';
     document.getElementById('planGrid').innerHTML = html;
     
-    // Stats table
     let st = '<table class="emp-stats-table"><thead><tr><th>Name</th><th>Rolle</th><th>F</th><th>S</th><th>N</th><th>WE</th><th>AZV</th><th>Std</th><th>Diff</th></tr></thead><tbody>';
     for (const e of active) {
         const s = stats[e.name] || { early: 0, late: 0, night: 0, weekend: 0, azv: 0, actual: 0, target: 1 };
         const diff = Math.round(s.actual - s.target);
-        const diffColor = Math.abs(diff) > 8 ? 'var(--danger)' : Math.abs(diff) > 4 ? 'var(--warning)' : 'var(--success)';
-        st += `<tr>
-            <td><strong>${e.name}</strong></td>
-            <td>${e.role}</td>
+        st += `<tr><td><strong>${e.name}</strong></td><td>${e.role}</td>
             <td style="color:${s.early < 2 ? 'var(--danger)' : 'inherit'}">${s.early}</td>
             <td style="color:${s.late < 2 ? 'var(--danger)' : 'inherit'}">${s.late}</td>
             <td style="color:${s.night < 2 ? 'var(--danger)' : 'inherit'}">${s.night}</td>
-            <td>${s.weekend}</td>
-            <td>${s.azv || 0}</td>
-            <td>${s.actual}h</td>
-            <td style="color:${diffColor}">${diff >= 0 ? '+' : ''}${diff}h</td>
-        </tr>`;
+            <td>${s.weekend}</td><td>${s.azv || 0}</td><td>${s.actual}h</td>
+            <td style="color:${Math.abs(diff) > 8 ? 'var(--danger)' : Math.abs(diff) > 4 ? 'var(--warning)' : 'var(--success)'}">${diff >= 0 ? '+' : ''}${diff}h</td></tr>`;
     }
     st += '</tbody></table>';
     document.getElementById('statsTable').innerHTML = st;
 }
 
-// Edit by employee click
 function openEditByEmp(empName, d) {
     const plan = data.currentPlan || {};
     const isWE = isWEorHoliday(d, getHolidays(data.currentYear));
@@ -1108,7 +1089,6 @@ function openEditByEmp(empName, d) {
     
     document.getElementById('editTitle').textContent = `${empName} - Tag ${d}`;
     
-    // Find current assignment
     let currentShift = '';
     if (plan[`${d}_AZV_${empName}`]) currentShift = 'AZV';
     else if (isWE) {
@@ -1123,7 +1103,6 @@ function openEditByEmp(empName, d) {
     document.getElementById('editInfo').textContent = currentShift ? `Aktuell: ${currentShift}` : (wish || 'Keine Zuweisung');
     
     let html = '<div style="display:flex;flex-direction:column;gap:8px">';
-    
     if (isWE) {
         html += `<button class="btn ${currentShift === 'WE_Tag' ? 'btn-primary' : 'btn-secondary'}" onclick="assignToEmp('${empName}',${d},'WE_Tag')">🌅 Tagdienst (F)</button>`;
         html += `<button class="btn ${currentShift === 'WE_Nacht' ? 'btn-primary' : 'btn-secondary'}" onclick="assignToEmp('${empName}',${d},'WE_Nacht')">🌙 Nachtdienst (N)</button>`;
@@ -1133,41 +1112,22 @@ function openEditByEmp(empName, d) {
         html += `<button class="btn ${currentShift === 'Nacht' ? 'btn-primary' : 'btn-secondary'}" onclick="assignToEmp('${empName}',${d},'Nacht')">🌙 Nachtdienst (N)</button>`;
         html += `<button class="btn ${currentShift === 'AZV' ? 'btn-primary' : 'btn-secondary'}" onclick="assignToEmp('${empName}',${d},'AZV')">📅 AZV</button>`;
     }
-    
-    html += `<button class="btn btn-danger" onclick="assignToEmp('${empName}',${d},'')">❌ Entfernen</button>`;
-    html += '</div>';
-    
+    html += `<button class="btn btn-danger" onclick="assignToEmp('${empName}',${d},'')">❌ Entfernen</button></div>`;
     document.getElementById('editOptions').innerHTML = html;
     openModal('editModal');
 }
 
 function assignToEmp(empName, d, shift) {
     if (!data.currentPlan) data.currentPlan = {};
-    
     const isWE = isWEorHoliday(d, getHolidays(data.currentYear));
-    
-    // Remove from all shifts and AZV first
     const allShifts = isWE ? ['WE_Tag', 'WE_Nacht'] : ['Frueh', 'Spaet', 'Nacht'];
-    for (const s of allShifts) {
-        if (data.currentPlan[`${d}_${s}`] === empName) {
-            delete data.currentPlan[`${d}_${s}`];
-        }
-    }
-    // Remove AZV
+    for (const s of allShifts) if (data.currentPlan[`${d}_${s}`] === empName) delete data.currentPlan[`${d}_${s}`];
     delete data.currentPlan[`${d}_AZV_${empName}`];
     
-    // Assign new shift
-    if (shift === 'AZV') {
-        data.currentPlan[`${d}_AZV_${empName}`] = true;
-    } else if (shift) {
-        data.currentPlan[`${d}_${shift}`] = empName;
-    }
+    if (shift === 'AZV') data.currentPlan[`${d}_AZV_${empName}`] = true;
+    else if (shift) data.currentPlan[`${d}_${shift}`] = empName;
     
-    recalcStats();
-    saveData();
-    closeModal('editModal');
-    renderPlan();
-    showToast('Geändert!', 'success');
+    recalcStats(); saveData(); closeModal('editModal'); renderPlan(); showToast('Geändert!', 'success');
 }
 
 function recalcStats() {
@@ -1183,9 +1143,7 @@ function recalcStats() {
             for (let d = 1; d <= days; d++) {
                 const dk = `${data.currentYear}-${data.currentMonth}-${d}`;
                 const wish = data.wishes[dk]?.[e.name];
-                if (!isWEorHoliday(d, holidays) && wish !== 'Urlaub' && wish !== 'FREI') {
-                    target += 8 * (e.percent / 100);
-                }
+                if (!isWEorHoliday(d, holidays) && wish !== 'Urlaub' && wish !== 'FREI') target += 8 * (e.percent / 100);
             }
         }
         stats[e.name] = { target, actual: 0, early: 0, late: 0, night: 0, weekend: 0, azv: 0 };
@@ -1193,8 +1151,6 @@ function recalcStats() {
     
     for (let d = 1; d <= days; d++) {
         const isWE = isWEorHoliday(d, holidays);
-        
-        // Schichten
         for (const [sid, si] of Object.entries(SHIFT_TYPES)) {
             const emp = data.currentPlan[`${d}_${sid}`];
             if (emp && emp !== 'SAAL' && stats[emp]) {
@@ -1205,19 +1161,13 @@ function recalcStats() {
                 if (si.type === 'N') stats[emp].night++;
             }
         }
-        
-        // AZV (pro Person gespeichert)
-        for (const e of active) {
-            if (data.currentPlan[`${d}_AZV_${e.name}`]) {
-                stats[e.name].azv++;
-            }
-        }
+        for (const e of active) if (data.currentPlan[`${d}_AZV_${e.name}`]) stats[e.name].azv++;
     }
     data.currentStats = stats;
 }
 
-// ========== EXCEL EXPORT (wie IMC Template) ==========
-function exportCSV() {
+// ========== PRAVI EXCEL EXPORT (SheetJS) ==========
+function exportExcel() {
     if (!data.currentPlan) { showToast('Kein Plan!', 'error'); return; }
     
     const days = getDaysInMonth(data.currentYear, data.currentMonth);
@@ -1225,15 +1175,14 @@ function exportCSV() {
     const active = data.employees.filter(e => e.percent > 0);
     const stats = data.currentStats || {};
     
-    // Build data array for Excel
     const wsData = [];
     
-    // Row 1: Empty + Day numbers
-    const headerRow = [''];
+    // Row 1: Prazno + Brojevi dana
+    const headerRow = ['Mitarbeiter / Tag'];
     for (let d = 1; d <= days; d++) headerRow.push(d);
     wsData.push(headerRow);
     
-    // Row 2: Empty + Weekday names
+    // Row 2: Prazno + Imena dana
     const weekdayRow = [''];
     for (let d = 1; d <= days; d++) {
         const dt = new Date(data.currentYear, data.currentMonth - 1, d);
@@ -1241,69 +1190,50 @@ function exportCSV() {
     }
     wsData.push(weekdayRow);
     
-    // Employee rows
+    // Redovi sa zaposlenima
     for (const emp of active) {
         const row = [`${emp.name} (${emp.percent}%)`];
-        
         for (let d = 1; d <= days; d++) {
             const dk = `${data.currentYear}-${data.currentMonth}-${d}`;
             const wish = data.wishes[dk]?.[emp.name];
             const isWE = isWEorHoliday(d, holidays);
-            
             let code = '';
             
-            // Check wishes first
-            if (wish === 'Urlaub') {
-                code = 'U';
-            } else if (data.currentPlan[`${d}_AZV_${emp.name}`]) {
-                code = 'AZV';
-            } else if (isWE) {
+            if (wish === 'Urlaub') code = 'U';
+            else if (data.currentPlan[`${d}_AZV_${emp.name}`]) code = 'AZV';
+            else if (isWE) {
                 if (data.currentPlan[`${d}_WE_Tag`] === emp.name) code = 'F';
                 else if (data.currentPlan[`${d}_WE_Nacht`] === emp.name) code = 'N';
-                // WE ohne Schicht = leer (OK)
             } else {
                 if (data.currentPlan[`${d}_Frueh`] === emp.name) code = 'F';
                 else if (data.currentPlan[`${d}_Spaet`] === emp.name) code = 'S';
                 else if (data.currentPlan[`${d}_Nacht`] === emp.name) code = 'N';
-                // Arbeitstag ohne Schicht sollte nicht vorkommen (wird als AZV markiert)
             }
-            
             row.push(code);
         }
         wsData.push(row);
     }
     
-    // Saalanästhesist row
+    // Saalanästhesist
     const saalRow = ['Saalanästhesist'];
     for (let d = 1; d <= days; d++) {
         const dk = `${data.currentYear}-${data.currentMonth}-${d}`;
         const isWE = isWEorHoliday(d, holidays);
         const shift = isWE ? 'WE_Nacht' : 'Nacht';
-        
-        if (data.saalNights[dk] || data.currentPlan[`${d}_${shift}`] === 'SAAL') {
-            saalRow.push('N');
-        } else {
-            saalRow.push('#');
-        }
+        if (data.saalNights[dk] || data.currentPlan[`${d}_${shift}`] === 'SAAL') saalRow.push('N');
+        else saalRow.push('');
     }
     wsData.push(saalRow);
     
-    // Empty row
     wsData.push(['']);
     
-    // Counter rows: F, S, N
-    const counters = [
-        { code: 'F', label: 'FD' },
-        { code: 'S', label: 'SD' },
-        { code: 'N', label: 'ND' }
-    ];
-    
+    // Brojači
+    const counters = [{ code: 'F', label: 'FD' }, { code: 'S', label: 'SD' }, { code: 'N', label: 'ND' }];
     for (const counter of counters) {
         const row = [counter.label];
         for (let d = 1; d <= days; d++) {
             let count = 0;
             const isWE = isWEorHoliday(d, holidays);
-            
             for (const emp of active) {
                 if (isWE) {
                     if (counter.code === 'F' && data.currentPlan[`${d}_WE_Tag`] === emp.name) count++;
@@ -1319,33 +1249,23 @@ function exportCSV() {
         wsData.push(row);
     }
     
-    // Ferien row
+    // Praznici
     const ferienRow = ['Ferien'];
     for (let d = 1; d <= days; d++) {
         const iso = `${data.currentYear}-${String(data.currentMonth).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-        const holidayName = holidays.get(iso);
-        ferienRow.push(holidayName ? holidayName.substring(0, 8) : '');
+        ferienRow.push(holidays.get(iso) || '');
     }
     wsData.push(ferienRow);
     
-    // Convert to CSV (semicolon separated for German Excel)
-    let csv = wsData.map(row => row.join(';')).join('\n');
+    // Kreiranje radne sveske (Workbook)
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.aoa_to_sheet(wsData);
     
-    // Add statistics at bottom
-    csv += '\n\n;STATISTIK\n';
-    csv += ';Name;Rolle;F;S;N;WE;AZV;Std;Ziel;Diff\n';
-    for (const e of active) {
-        const s = stats[e.name] || { early: 0, late: 0, night: 0, weekend: 0, azv: 0, actual: 0, target: 0 };
-        const diff = Math.round(s.actual - s.target);
-        csv += `;${e.name};${e.role};${s.early};${s.late};${s.night};${s.weekend};${s.azv || 0};${s.actual};${Math.round(s.target)};${diff >= 0 ? '+' : ''}${diff}\n`;
-    }
+    // Dodavanje sveske i čuvanje
+    XLSX.utils.book_append_sheet(wb, ws, "Dienstplan");
+    XLSX.writeFile(wb, `Dienstplan_${MONTHS[data.currentMonth-1]}_${data.currentYear}.xlsx`);
     
-    const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8' });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = `Dienstplan_${MONTHS[data.currentMonth-1]}_${data.currentYear}.csv`;
-    a.click();
-    showToast('CSV exportiert! (Öffne mit Excel)', 'success');
+    showToast('Excel uspešno kreiran!', 'success');
 }
 
 function renderAll() { renderEmployees(); renderPlan(); }
@@ -1353,3 +1273,4 @@ document.addEventListener('DOMContentLoaded', init);
 </script>
 </body>
 </html>
+
